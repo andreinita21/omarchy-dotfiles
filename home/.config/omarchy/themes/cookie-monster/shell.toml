@@ -1,0 +1,145 @@
+# Cookie Monster — Omarchy shell surfaces.
+# Every bordered surface carries a blue gradient sampled from the wallpaper:
+# deep fur blue (#1c5a99) -> monster blue (#1d9acd) -> screen glow (#57c2cf).
+
+[bar]
+# Transparent so the wallpaper reads straight through the bar and the desktop
+# stays continuous from the top edge down. The wallpaper's top strip is solid
+# black across the full width, so bar text keeps full contrast.
+background       = "#000000"
+background-alpha = 0.0
+text             = "#d6ecfa"
+active           = "#35b3e8"
+scale-with-font  = true
+size-horizontal  = 26
+size-vertical    = 28
+
+[hyprland]
+# Shared gradient tokens every surface below references.
+active-border            = "rgba(1c5a99ee) rgba(1d9acdee) rgba(57c2cfee) 45deg"
+active-border-foreground = "rgba(1d9acdee) rgba(57c2cfee) rgba(a8cfe8ee) 45deg"
+
+[controls]
+# Idle chrome: a soft deep-blue gradient edge.
+normal-color        = "#d6ecfa"
+normal-fill-alpha   = 0.05
+normal-border       = "rgba(1c5a99ff) rgba(1d9acdff) 45deg"
+normal-border-width = 1
+normal-border-alpha = 0.45
+
+# Hover / keyboard cursor: the gradient brightens toward the screen glow.
+hover-cursor-color        = "#f2fbff"
+hover-cursor-fill-alpha   = 0.10
+hover-cursor-border       = "rgba(1d9acdff) rgba(57c2cfff) rgba(7ddfe9ff) 45deg"
+hover-cursor-border-width = 1
+hover-cursor-border-alpha = 0.65
+
+# Focus mirrors hover so mouse, keyboard cursor and tab focus read alike.
+focus-color        = "#f2fbff"
+focus-fill-alpha   = 0.10
+focus-border       = "rgba(1d9acdff) rgba(57c2cfff) rgba(7ddfe9ff) 45deg"
+focus-border-width = 1
+focus-border-alpha = 0.65
+
+# Selected: full-strength gradient edge.
+selected-color        = "#f2fbff"
+selected-fill-alpha   = 0.16
+selected-border       = "rgba(35b3e8ff) rgba(7ddfe9ff) 45deg"
+selected-border-width = 1
+selected-border-alpha = 1.0
+
+pressed-fill-alpha   = 0.24
+selection-fill-alpha = 0.38
+
+[spacing]
+scale = 1.0
+scale-with-font = true
+
+[font]
+base-size = 12
+
+[popups]
+background       = "#050a16"
+background-alpha = 0.95
+text             = "#d6ecfa"
+border           = "hyprland.active-border"
+border-alpha     = 1.0
+border-width     = 2
+
+[tooltip]
+background       = "#050a16"
+background-alpha = 0.97
+text             = "#d6ecfa"
+border           = "hyprland.active-border-foreground"
+border-alpha     = 1.0
+
+[notifications]
+background       = "#050a16"
+background-alpha = 0.95
+text             = "#d6ecfa"
+border           = "hyprland.active-border"
+border-alpha     = 1.0
+border-width     = 2
+countdown        = "#35b3e8"
+
+[launcher]
+background                = "#050a16"
+background-alpha          = 0.92
+text                      = "#d6ecfa"
+border                    = "hyprland.active-border-foreground"
+border-alpha              = 1.0
+scrim                     = "#01030a"
+scrim-alpha               = 0.55
+selected-background       = "#35b3e8"
+selected-background-alpha = 0.14
+selected-text             = "#7ddfe9"
+selected-border           = "rgba(35b3e8ff) rgba(7ddfe9ff) 45deg"
+selected-border-alpha     = 0.55
+
+[menu]
+background                = "#050a16"
+background-alpha          = 0.95
+text                      = "#d6ecfa"
+border                    = "hyprland.active-border-foreground"
+border-alpha              = 1.0
+scrim                     = "#01030a"
+scrim-alpha               = 0.55
+selected-background       = "#35b3e8"
+selected-background-alpha = 0.14
+selected-text             = "#7ddfe9"
+selected-border           = "rgba(35b3e8ff) rgba(7ddfe9ff) 45deg"
+selected-border-alpha     = 0.55
+
+[polkit]
+background       = "#050a16"
+background-alpha = 0.96
+text             = "#d6ecfa"
+text-error       = "#e8628c"
+border           = "hyprland.active-border"
+border-error     = "#e8628c"
+border-alpha     = 1.0
+scrim            = "#01030a"
+scrim-alpha      = 0.55
+accent           = "#35b3e8"
+
+[lock]
+background       = "#050a16"
+background-alpha = 0.8
+text             = "#d6ecfa"
+placeholder      = "#5b7fa3"
+text-error       = "#e8628c"
+border           = "hyprland.active-border"
+border-active    = "rgba(35b3e8ff) rgba(7ddfe9ff) rgba(a8cfe8ff) 45deg"
+border-error     = "#e8628c"
+border-alpha     = 1.0
+selection        = "#35b3e8"
+selection-alpha  = 0.45
+
+[image-picker]
+scrim                   = "#01030a"
+scrim-alpha             = 0.55
+text                    = "#d6ecfa"
+selected-border         = "#35b3e8"
+selected-border-alpha   = 1.0
+unselected-border       = "#a8cfe8"
+unselected-border-alpha = 0.28

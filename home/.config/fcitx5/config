@@ -1,0 +1,9 @@
+# Only keyboard-us is configured, so the input-method switch hotkeys have
+# nothing to switch between. Clear them so fcitx5 never swallows
+# Control+Space (which collides with SUPER+CTRL+SPACE, the background switcher).
+[Hotkey]
+EnumerateWithTriggerKeys=True
+
+[Hotkey/TriggerKeys]
+
+[Hotkey/AltTriggerKeys]

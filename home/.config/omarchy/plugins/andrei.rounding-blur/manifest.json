@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "andrei.rounding-blur",
+  "name": "Rounding & Blur",
+  "version": "1.0.0",
+  "author": "andrei",
+  "description": "Popup to tune window corner rounding and blur, opened from the Omarchy menu (based on charlieras262.omablur)",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "RoundingBlur.qml"
+  }
+}

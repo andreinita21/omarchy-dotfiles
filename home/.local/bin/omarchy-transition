@@ -1,0 +1,44 @@
+#!/bin/bash
+# Pick the desktop transition used when the theme or the wallpaper changes.
+# The choice is independent of the active theme, so it applies to all of them.
+#
+# Usage: omarchy-transition <theme|background> <effect>
+#        omarchy-transition <theme|background>          (print current)
+#        omarchy-transition list
+
+EFFECTS=(none fade blinds wipe circle clock slide zoom tiles bars random)
+DEFAULT_theme=blinds
+DEFAULT_background=blinds
+STATE_DIR="$HOME/.local/state/omarchy"
+
+usage() {
+  echo "Usage: omarchy-transition <theme|background> [${EFFECTS[*]}]" >&2
+  exit 1
+}
+
+if [[ $1 == list ]]; then
+  printf '%s\n' "${EFFECTS[@]}"
+  exit 0
+fi
+
+kind="$1"
+[[ $kind == theme || $kind == background ]] || usage
+file="$STATE_DIR/transition-$kind"
+
+if [[ -z $2 ]]; then
+  default="DEFAULT_$kind"
+  cat "$file" 2>/dev/null || echo "${!default}"
+  exit 0
+fi
+
+effect="$2"
+[[ " ${EFFECTS[*]} " == *" $effect "* ]] || usage
+
+mkdir -p "$STATE_DIR"
+printf '%s\n' "$effect" >"$file"
+
+# Applied straight away; the background plugin also re-reads the files on start.
+omarchy-shell -q background setTransition "$kind" "$effect" >/dev/null 2>&1
+
+label=$([[ $kind == theme ]] && echo "Theme" || echo "Wallpaper")
+omarchy-notification-send "$label transition: $effect" -t 1200

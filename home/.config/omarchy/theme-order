@@ -1,0 +1,9 @@
+# Theme picker order, one theme folder name per line, left to right.
+# Used by omarchy-theme-switcher-ordered and omarchy-theme-cycle.
+# Installed themes missing from this list are added at the end, alphabetically.
+cookie-monster
+tokyo-night
+neon-dusk
+neon-purple
+matrix
+osaka-jade

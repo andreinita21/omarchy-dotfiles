@@ -1,0 +1,42 @@
+#!/bin/bash
+# Cycle the top bar's appearance mode, independently of the active theme.
+#
+#   transparent  no bar background at all (Omarchy's own default look)
+#   blur         dark scrim with Hyprland blurring the wallpaper behind it
+#   oled         fully opaque pure black
+#
+# Usage: omarchy-bar-mode [next|prev|transparent|blur|oled]
+
+MODES=(transparent blur oled)
+MODE_FILE="$HOME/.local/state/omarchy/bar-mode"
+
+arg="${1:-next}"
+
+current=$(cat "$MODE_FILE" 2>/dev/null)
+index=0
+for i in "${!MODES[@]}"; do
+  if [[ ${MODES[$i]} == "$current" ]]; then
+    index=$i
+    break
+  fi
+done
+
+case "$arg" in
+  next) target="${MODES[$(((index + 1) % ${#MODES[@]}))]}" ;;
+  prev | previous) target="${MODES[$(((index - 1 + ${#MODES[@]}) % ${#MODES[@]}))]}" ;;
+  transparent | blur | oled) target="$arg" ;;
+  *)
+    echo "Usage: omarchy-bar-mode [next|prev|${MODES[*]}]" >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p "$(dirname "$MODE_FILE")"
+printf '%s\n' "$target" >"$MODE_FILE"
+
+# The bar repaints from this straight away; hypr/barmode.lua re-reads the file
+# on the reload below to add or drop the blur layer rule.
+omarchy-shell -q omarchy.bar setMode "$target"
+hyprctl reload >/dev/null
+
+omarchy-notification-send "Bar: $target" -t 1200

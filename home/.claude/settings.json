@@ -1,0 +1,11 @@
+{
+  "model": "opus[1m]",
+  "statusLine": {
+    "type": "command",
+    "command": "bash /home/andrei/.claude/statusline-command.sh",
+    "refreshInterval": 2
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "custom:omarchy",
+  "agentPushNotifEnabled": true
+}

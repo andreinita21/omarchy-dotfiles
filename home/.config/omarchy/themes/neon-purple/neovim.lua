@@ -1,0 +1,46 @@
+return {
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    priority = 1000,
+    opts = {
+      flavour = "mocha",
+      color_overrides = {
+        mocha = {
+          base = "#0a0410",
+          mantle = "#060209",
+          crust = "#030105",
+          surface0 = "#1e0f2e",
+          surface1 = "#2b1642",
+          surface2 = "#3a1a5e",
+          overlay0 = "#6b4a8c",
+          overlay1 = "#7c6494",
+          overlay2 = "#9a7fb5",
+          text = "#e6d8f7",
+          subtext0 = "#cbb2e8",
+          subtext1 = "#d9c8f0",
+          mauve = "#9b4bea",
+          lavender = "#b3a5ff",
+          blue = "#6a2bc9",
+          sapphire = "#8f77f0",
+          sky = "#b3a5ff",
+          teal = "#a887ff",
+          green = "#7b52e8",
+          yellow = "#b98cf2",
+          peach = "#a94ee6",
+          maroon = "#c13ae0",
+          red = "#c13ae0",
+          pink = "#de6bff",
+          flamingo = "#d7b6ff",
+          rosewater = "#f6ecff",
+        },
+      },
+    },
+  },
+  {
+    "LazyVim/LazyVim",
+    opts = {
+      colorscheme = "catppuccin-mocha",
+    },
+  },
+}

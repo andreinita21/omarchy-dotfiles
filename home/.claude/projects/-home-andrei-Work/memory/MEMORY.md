@@ -1,0 +1,2 @@
+- [Screenshot workspaces](screenshot-workspaces.md) — use workspaces 4 and 5 for desktop captures; 1-3 hold live apps
+- [hyprctl Lua dispatch](hyprctl-lua-dispatch.md) — `hyprctl dispatch` takes Lua here; classic syntax fails silently

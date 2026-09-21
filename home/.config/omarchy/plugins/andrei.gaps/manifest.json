@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "andrei.gaps",
+  "name": "Window Gaps",
+  "version": "1.0.0",
+  "author": "andrei",
+  "description": "Popup with sliders for window outer margins and inner gaps, opened from the Omarchy menu",
+  "kinds": [
+    "overlay"
+  ],
+  "entryPoints": {
+    "overlay": "Gaps.qml"
+  },
+  "keepLoaded": true
+}

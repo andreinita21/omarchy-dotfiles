@@ -1,0 +1,1 @@
+- [Dotfiles repo](dotfiles-repo.md) — ~/dotfiles replicates the Omarchy setup; run ./dot sync after config changes

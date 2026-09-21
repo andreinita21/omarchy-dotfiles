@@ -1,0 +1,10 @@
+#!/bin/bash
+# Toggle the top bar (SUPER+SHIFT+SPACE). Flips the same bar-off flag as
+# omarchy-toggle-bar, serialized with flock so rapid presses can't interleave,
+# then pushes the resulting state to the bar over IPC.
+flag="$HOME/.local/state/omarchy/toggles/bar-off"
+mkdir -p "${flag%/*}"
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/omarchy-bar-toggle.lock"
+flock 9
+if [[ -f $flag ]]; then rm -f "$flag"; state=no; else touch "$flag"; state=yes; fi
+omarchy-shell -q omarchy.bar setHidden "$state"

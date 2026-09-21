@@ -1,0 +1,94 @@
+# Paths (relative to $HOME) that live in this repo under home/ and are
+# symlinked back into place. A directory entry links the whole directory, so
+# new files inside it are picked up automatically; a file entry links just
+# that file. Add a line here, then run `./dot adopt` to start tracking it.
+
+# Shell
+.bashrc
+.bash_profile
+.profile
+.XCompose
+
+# Desktop: Hyprland, Omarchy shell/bar/menu/themes/plugins/hooks
+.config/hypr
+.config/omarchy
+.config/autostart
+.config/hyprland-preview-share-picker
+.config/fontconfig
+.config/gtk-3.0/bookmarks
+.config/gtk-4.0
+.config/user-dirs.dirs
+.config/mimeapps.list
+.config/fcitx5
+.config/wireplumber
+.local/share/fonts
+.local/share/applications/WhatsApp.desktop
+
+# Terminals, prompt, shell tools
+.config/alacritty
+.config/foot
+.config/ghostty
+.config/kitty
+.config/starship.toml
+.config/blesh
+.config/tmux
+.config/fastfetch
+.config/btop
+.config/cava
+.config/lazygit
+.config/herdr/config.toml
+
+# Editors and apps
+.config/nvim
+.config/zed
+.config/opencode
+.config/Omacom
+.config/imv
+.config/tensaku
+.config/xournalpp
+.config/Pinta/settings.xml
+.config/Pinta/palette.txt
+.config/AirPodsTrayApp
+.config/chromium-flags.conf
+
+# Dev tooling
+.config/git
+.config/gh/config.yml
+.config/mise/config.toml
+
+# Personal scripts (bindings and the menu call these)
+.local/bin/omarchy-app-cleanup
+.local/bin/omarchy-bar-mode
+.local/bin/omarchy-bar-toggle
+.local/bin/omarchy-bg-cycle
+.local/bin/omarchy-theme-cycle
+.local/bin/omarchy-theme-list-ordered
+.local/bin/omarchy-theme-switcher-ordered
+.local/bin/omarchy-transition
+.local/bin/chromium-violet-dark
+
+# AI agent launchers (lazy mise installers)
+.local/bin/claude
+.local/bin/codex
+.local/bin/copilot
+.local/bin/crush
+.local/bin/cursor-agent
+.local/bin/gemini
+.local/bin/gh
+.local/bin/ghui
+.local/bin/grok
+.local/bin/hermes
+.local/bin/hunk
+.local/bin/muse
+.local/bin/omp
+.local/bin/opencode
+.local/bin/pi
+.local/bin/playwright
+
+# Agent configs (no credentials)
+.claude/settings.json
+.claude/statusline-command.sh
+.claude/projects/-home-andrei/memory
+.claude/projects/-home-andrei-Work/memory
+.claude/projects/-home-andrei-learning/memory
+.pi/agent/settings.json

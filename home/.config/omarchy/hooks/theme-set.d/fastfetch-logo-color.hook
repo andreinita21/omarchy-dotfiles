@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+# Repaint the fastfetch ASCII logo in the current Omarchy theme's accent color.
+#
+# The logo file uses fastfetch's $1 color placeholder, and the config's
+# logo.color."1" decides what that resolves to. Everything else in the config
+# already tracks the theme on its own: the keyColor values ("green", "blue",
+# "magenta") and the \e[90m box-drawing borders are ANSI palette slots, which
+# the terminal recolors when Omarchy retints it. Only this one entry is a
+# hardcoded truecolor triple, so only this one needs a hook.
+#
+# Omarchy runs theme-set hooks after the new theme is swapped into
+# ~/.local/state/omarchy/current/theme, so omarchy-theme-color reads the
+# theme that was just applied.
+
+set -euo pipefail
+
+CONFIG="$HOME/.config/fastfetch/config.jsonc"
+
+[[ -f $CONFIG ]] || exit 0
+command -v omarchy-theme-color >/dev/null 2>&1 || exit 0
+
+accent=$(omarchy-theme-color accent 2>/dev/null) || exit 0
+[[ $accent =~ ^#[0-9A-Fa-f]{6}$ ]] || exit 0
+
+hex="${accent#\#}"
+sgr=$(printf '38;2;%d;%d;%d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}")
+
+tmp=$(mktemp "$CONFIG.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+
+# Rewrite only the "1" entry inside the logo's "color" block, in place, so the
+# rest of the hand-written config (key order, comments, \u escapes) survives
+# untouched — which a jq round-trip would not manage.
+sed -E '/"color"[[:space:]]*:[[:space:]]*\{/,/\}/ s|("1"[[:space:]]*:[[:space:]]*")[^"]*(")|\1'"$sgr"'\2|' \
+  "$CONFIG" >"$tmp"
+
+if ! grep -qF "\"$sgr\"" "$tmp"; then
+  echo "fastfetch-logo-color: could not find logo.color.\"1\" in $CONFIG" >&2
+  exit 0
+fi
+
+cat "$tmp" >"$CONFIG"

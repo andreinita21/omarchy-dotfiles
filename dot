@@ -1,0 +1,410 @@
+#!/bin/bash
+# Replicate this Omarchy setup on another Omarchy install.
+#
+#   ./dot install   Full restore on a fresh Omarchy machine (packages, system
+#                   tweaks, apps, symlinks, theme/state). Safe to re-run.
+#   ./dot link      Only (re)create the symlinks from links.txt.
+#   ./dot sync      Snapshot package lists, services, dconf, Omarchy state and
+#                   /etc files into the repo, and heal links an app replaced
+#                   with a regular file. Run before committing.
+#   ./dot adopt     Move not-yet-tracked paths from links.txt into the repo and
+#                   link them back (use after adding a line to links.txt).
+#   ./dot status    Show which tracked paths are linked, missing or diverged.
+
+set -uo pipefail
+
+DOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+REPO_HOME="$DOT/home"
+BACKUP="$HOME/.local/state/dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
+SOURCE_HOME="$(cat "$DOT/.source-home" 2>/dev/null || echo /home/andrei)"
+
+c_blue=$'\e[34m' c_green=$'\e[32m' c_yellow=$'\e[33m' c_red=$'\e[31m' c_off=$'\e[0m'
+step() { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
+ok()   { printf '  %s✓%s %s\n' "$c_green" "$c_off" "$*"; }
+warn() { printf '  %s!%s %s\n' "$c_yellow" "$c_off" "$*"; }
+err()  { printf '  %s✗%s %s\n' "$c_red" "$c_off" "$*"; }
+
+# Non-comment, non-blank lines of a list file.
+entries() { [[ -f $1 ]] && sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$'; }
+
+backup() {
+  local target=$1 rel=${1#"$HOME"/}
+  mkdir -p "$BACKUP/$(dirname "$rel")"
+  mv "$target" "$BACKUP/$rel"
+  warn "backed up existing $rel -> ${BACKUP/#$HOME/\~}/$rel"
+}
+
+# ------------------------------------------------------------------ links
+
+cmd_link() {
+  step "Linking dotfiles"
+  local rel src dst
+  while IFS= read -r rel; do
+    src="$REPO_HOME/$rel" dst="$HOME/$rel"
+    if [[ ! -e $src && ! -L $src ]]; then
+      warn "not in repo, skipped: $rel"
+      continue
+    fi
+    if [[ -L $dst && $(readlink "$dst") == "$src" ]]; then
+      continue
+    fi
+    if [[ -e $dst || -L $dst ]]; then backup "$dst"; fi
+    mkdir -p "$(dirname "$dst")"
+    ln -s "$src" "$dst"
+    ok "$rel"
+  done < <(entries "$DOT/links.txt")
+  ok "all links in place"
+}
+
+cmd_adopt() {
+  step "Adopting untracked paths into the repo"
+  local rel src dst
+  while IFS= read -r rel; do
+    src="$REPO_HOME/$rel" dst="$HOME/$rel"
+    [[ -L $dst && $(readlink "$dst") == "$src" ]] && continue
+    if [[ -e $src ]]; then
+      warn "$rel already in repo but not linked here; run ./dot link (or sync to heal)"
+      continue
+    fi
+    if [[ ! -e $dst ]]; then
+      warn "missing on this machine, skipped: $rel"
+      continue
+    fi
+    mkdir -p "$(dirname "$src")"
+    mv "$dst" "$src"
+    ln -s "$src" "$dst"
+    ok "$rel"
+  done < <(entries "$DOT/links.txt")
+}
+
+# An app that saves by writing a temp file and renaming it over the target
+# replaces our symlink with a regular file. Pull that newer copy back in.
+heal_links() {
+  local rel src dst
+  while IFS= read -r rel; do
+    src="$REPO_HOME/$rel" dst="$HOME/$rel"
+    [[ -e $src && -e $dst && ! -L $dst ]] || continue
+    if [[ -f $dst && -f $src ]]; then
+      cp -p "$dst" "$src"
+      rm "$dst"
+      ln -s "$src" "$dst"
+      ok "healed $rel (app replaced the link; newer copy pulled into repo)"
+    else
+      warn "$rel is a real directory, not a link; resolve by hand"
+    fi
+  done < <(entries "$DOT/links.txt")
+}
+
+cmd_status() {
+  step "Link status"
+  local rel src dst
+  while IFS= read -r rel; do
+    src="$REPO_HOME/$rel" dst="$HOME/$rel"
+    if [[ -L $dst && $(readlink "$dst") == "$src" ]]; then
+      ok "$rel"
+    elif [[ ! -e $src ]]; then
+      warn "$rel (not in repo)"
+    elif [[ -e $dst ]]; then
+      err "$rel (real file/dir, not linked)"
+    else
+      err "$rel (missing)"
+    fi
+  done < <(entries "$DOT/links.txt")
+  step "Repo changes"
+  git -C "$DOT" status --short
+}
+
+# ------------------------------------------------------------------ sync
+
+cmd_sync() {
+  step "Healing replaced links"
+  heal_links
+
+  step "Snapshotting packages"
+  mkdir -p "$DOT/packages"
+  pacman -Qqen | sort > "$DOT/packages/pacman.txt"
+  pacman -Qqem | sort > "$DOT/packages/aur.txt"
+  # Omarchy base packages this machine removed.
+  if [[ -f /usr/share/omarchy/install/omarchy-base.packages ]]; then
+    entries /usr/share/omarchy/install/omarchy-base.packages | while read -r p; do
+      pacman -Qq "$p" &>/dev/null || echo "$p"
+    done | sort > "$DOT/packages/remove.txt"
+  fi
+  ok "pacman: $(wc -l < "$DOT/packages/pacman.txt")  aur: $(wc -l < "$DOT/packages/aur.txt")  removed: $(wc -l < "$DOT/packages/remove.txt")"
+
+  step "Snapshotting Omarchy extras"
+  mkdir -p "$DOT/omarchy"
+  # Default launchers (web apps, TUIs) Omarchy ships that were deleted here.
+  if [[ -d /usr/share/omarchy/applications ]]; then
+    for f in /usr/share/omarchy/applications/*.desktop; do
+      n=$(basename "$f" .desktop)
+      [[ -e $HOME/.local/share/applications/$n.desktop ]] || echo "$n"
+    done | sort > "$DOT/omarchy/apps-remove.txt"
+  fi
+  # Stock themes hidden via pacman NoExtract.
+  grep -oP '^NoExtract\s*=\s*usr/share/omarchy/themes/\K[^/*]+$' /etc/pacman.conf | sort -u \
+    > "$DOT/omarchy/themes-remove.txt"
+  # Git-cloned themes and plugins are re-cloned, not committed.
+  : > "$DOT/omarchy/git-clones.txt"
+  for d in "$HOME"/.config/omarchy/themes/* "$HOME"/.config/omarchy/plugins/*; do
+    [[ -d $d/.git ]] || continue
+    printf '%s %s\n' "${d#"$HOME"/.config/omarchy/}" "$(git -C "$d" remote get-url origin)" \
+      >> "$DOT/omarchy/git-clones.txt"
+  done
+  ok "$(wc -l < "$DOT/omarchy/git-clones.txt") git themes/plugins, $(wc -l < "$DOT/omarchy/apps-remove.txt") removed launchers, $(wc -l < "$DOT/omarchy/themes-remove.txt") hidden stock themes"
+  write_gitignore
+
+  step "Snapshotting Omarchy state"
+  local st="$HOME/.local/state/omarchy"
+  rm -rf "$DOT/state" && mkdir -p "$DOT/state"
+  cp "$st/current/theme.name" "$DOT/state/theme.name"
+  basename "$(readlink "$st/current/background")" > "$DOT/state/background.name"
+  for f in bar-mode transition-background transition-theme; do
+    [[ -f $st/$f ]] && cp "$st/$f" "$DOT/state/$f"
+  done
+  for d in defaults powerprofiles workspace-layouts; do
+    [[ -d $st/$d ]] && cp -r "$st/$d" "$DOT/state/$d"
+  done
+  ok "theme $(cat "$DOT/state/theme.name"), background $(cat "$DOT/state/background.name")"
+
+  step "Snapshotting GNOME/GTK settings (dconf)"
+  dconf dump / > "$DOT/dconf.ini" && ok "dconf.ini"
+
+  step "Snapshotting services"
+  mkdir -p "$DOT/system"
+  systemctl list-unit-files --state=enabled --no-legend --type=service,socket,timer,path \
+    | awk '{print $1}' | grep -v '@' | sort > "$DOT/system/services.txt"
+  ok "$(wc -l < "$DOT/system/services.txt") enabled system units"
+
+  step "Snapshotting /etc files"
+  while IFS= read -r f; do
+    if [[ -r $f ]]; then
+      install -D -m644 "$f" "$DOT/system/etc/${f#/etc/}"
+    else
+      warn "cannot read $f"
+    fi
+  done < <(entries "$DOT/system/etc-files.txt")
+  ok "done"
+
+  secret_scan
+  step "Repo changes"
+  git -C "$DOT" status --short
+}
+
+write_gitignore() {
+  {
+    cat <<'EOF'
+# Generated by ./dot sync -- edit the header section in dot, not here.
+*.bak
+*.bak.*
+*.bak-*
+__pycache__/
+*.log
+home/.config/btop/themes/current.theme
+home/.config/omarchy/plugins/*/daemon/build/
+
+# Secrets that live inside tracked directories go here. Never commit them.
+
+# Git-cloned themes/plugins (re-cloned from omarchy/git-clones.txt)
+EOF
+    while read -r path _; do echo "home/.config/omarchy/$path/"; done < "$DOT/omarchy/git-clones.txt"
+  } > "$DOT/.gitignore"
+}
+
+# Refuse to let obvious credentials into a commit.
+secret_scan() {
+  step "Scanning tracked files for secrets"
+  local hits
+  hits=$(cd "$DOT" && git ls-files -co --exclude-standard -z \
+    | xargs -0 grep -IlE 'gh[pousr]_[A-Za-z0-9]{20,}|sk-(ant-)?[A-Za-z0-9_-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]+|"(access|refresh)_token"\s*:' 2>/dev/null)
+  if [[ -n $hits ]]; then
+    err "possible secrets in:"; printf '      %s\n' $hits
+    err "add them to the secrets section of .gitignore (in dot) before committing"
+    return 1
+  fi
+  ok "nothing found"
+}
+
+# ------------------------------------------------------------------ install
+
+sudo_keepalive() {
+  sudo -v || exit 1
+  while true; do sudo -n true; sleep 50; kill -0 "$$" 2>/dev/null || exit; done 2>/dev/null &
+}
+
+install_system_tweaks() {
+  step "Hiding stock themes (pacman NoExtract)"
+  local conf=/etc/pacman.conf t lines=""
+  while read -r t; do
+    grep -q "^NoExtract = usr/share/omarchy/themes/$t\$" "$conf" && continue
+    lines+="NoExtract = usr/share/omarchy/themes/$t"$'\n'"NoExtract = usr/share/omarchy/themes/$t/*"$'\n'
+  done < <(entries "$DOT/omarchy/themes-remove.txt")
+  if [[ -n $lines ]]; then
+    sudo cp "$conf" "$conf.bak.$(date +%s)"
+    awk -v add="$lines" '{ print } /^\[options\]/ { printf "%s", add }' "$conf" | sudo tee "$conf.new" >/dev/null \
+      && sudo mv "$conf.new" "$conf"
+    ok "pacman.conf updated"
+  fi
+  while read -r t; do
+    [[ -d /usr/share/omarchy/themes/$t ]] && sudo rm -rf "/usr/share/omarchy/themes/$t" && ok "removed stock theme $t"
+  done < <(entries "$DOT/omarchy/themes-remove.txt")
+
+  step "Copying /etc files"
+  local rel
+  while IFS= read -r f; do
+    rel=${f#/etc/}
+    [[ -f $DOT/system/etc/$rel ]] || continue
+    sudo install -D -m644 "$DOT/system/etc/$rel" "$f" && ok "$f"
+  done < <(entries "$DOT/system/etc-files.txt")
+}
+
+install_packages() {
+  step "Installing pacman packages"
+  local pkgs missing=()
+  mapfile -t pkgs < <(entries "$DOT/packages/pacman.txt")
+  if ! sudo pacman -Syu --needed --noconfirm "${pkgs[@]}"; then
+    warn "batch install failed; retrying one by one"
+    for p in "${pkgs[@]}"; do
+      sudo pacman -S --needed --noconfirm "$p" &>/dev/null || missing+=("$p")
+    done
+  fi
+  ((${#missing[@]})) && warn "could not install: ${missing[*]}"
+
+  step "Installing AUR packages"
+  mapfile -t pkgs < <(entries "$DOT/packages/aur.txt")
+  ((${#pkgs[@]})) && yay -S --needed --noconfirm "${pkgs[@]}"
+
+  step "Removing Omarchy defaults you removed"
+  while read -r p; do
+    pacman -Qq "$p" &>/dev/null || continue
+    sudo pacman -Rns --noconfirm "$p" &>/dev/null && ok "removed $p" || warn "kept $p (still required)"
+  done < <(entries "$DOT/packages/remove.txt")
+}
+
+install_services() {
+  step "Enabling system services"
+  while read -r u; do
+    systemctl is-enabled "$u" &>/dev/null && continue
+    sudo systemctl enable "$u" &>/dev/null && ok "$u" || warn "could not enable $u"
+  done < <(entries "$DOT/system/services.txt")
+}
+
+fix_home_paths() {
+  [[ $HOME == "$SOURCE_HOME" ]] && return
+  step "Rewriting $SOURCE_HOME -> $HOME in configs"
+  grep -rlI --exclude-dir=.git "$SOURCE_HOME" "$REPO_HOME" | while read -r f; do
+    sed -i "s#$SOURCE_HOME#$HOME#g" "$f" && ok "${f#"$REPO_HOME"/}"
+  done
+  echo "$HOME" > "$DOT/.source-home"
+  warn "Claude memory dirs are keyed by path (-home-andrei-*); rename them in links.txt if you care"
+}
+
+install_git_clones() {
+  step "Cloning git themes and plugins"
+  local path url dst
+  while read -r path url; do
+    dst="$HOME/.config/omarchy/$path"
+    if [[ -d $dst/.git ]]; then
+      git -C "$dst" pull -q --ff-only && ok "$path (updated)"
+    else
+      git clone -q "$url" "$dst" && ok "$path"
+    fi
+  done < <(entries "$DOT/omarchy/git-clones.txt")
+
+  local pods="$HOME/.config/omarchy/plugins/io.github.thisisgm.omapods"
+  if [[ -x $pods/setup && ! -x $HOME/.local/bin/librepods ]]; then
+    step "Building AirPods daemon (omapods)"
+    "$pods/setup" || warn "omapods setup failed; re-run $pods/setup"
+  fi
+}
+
+install_apps() {
+  step "mise tools"
+  mise install -y && ok "mise"
+
+  if [[ ! -f $HOME/.local/share/blesh/ble.sh ]]; then
+    step "ble.sh"
+    local tmp; tmp=$(mktemp -d)
+    curl -fsSL https://github.com/akinomyoga/ble.sh/releases/download/nightly/ble-nightly.tar.xz \
+      | tar xJf - -C "$tmp" && bash "$tmp"/ble-nightly/ble.sh --install "$HOME/.local/share" && ok "ble.sh"
+    rm -rf "$tmp"
+  fi
+
+  if [[ ! -x $HOME/.cargo/bin/rustup ]]; then
+    step "Rust (rustup)"
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path && ok "rustup"
+  fi
+
+  if [[ ! -x $HOME/.local/bin/omadrop ]]; then
+    step "omadrop"
+    [[ -d $HOME/omadrop ]] || git clone -q --branch v0.3.0 https://github.com/btsouth/omadrop.git "$HOME/omadrop"
+    (cd "$HOME/omadrop" && ./install.sh) && ok "omadrop"
+  fi
+}
+
+install_desktop_state() {
+  step "Removing default launchers you deleted"
+  while IFS= read -r n; do
+    [[ -e $HOME/.local/share/applications/$n.desktop ]] || continue
+    omarchy-webapp-remove "$n" &>/dev/null || omarchy-tui-remove "$n" &>/dev/null \
+      || rm -f "$HOME/.local/share/applications/$n.desktop"
+    ok "$n"
+  done < <(entries "$DOT/omarchy/apps-remove.txt")
+
+  step "GNOME/GTK settings"
+  dconf load / < "$DOT/dconf.ini" && ok "dconf loaded"
+
+  step "Omarchy state"
+  local st="$HOME/.local/state/omarchy"
+  mkdir -p "$st"
+  for f in bar-mode transition-background transition-theme; do
+    [[ -f $DOT/state/$f ]] && cp "$DOT/state/$f" "$st/$f"
+  done
+  for d in defaults powerprofiles workspace-layouts; do
+    [[ -d $DOT/state/$d ]] && mkdir -p "$st/$d" && cp -r "$DOT/state/$d/." "$st/$d/"
+  done
+  fc-cache -f &>/dev/null
+  local theme bg
+  theme=$(cat "$DOT/state/theme.name")
+  bg=$(cat "$DOT/state/background.name")
+  omarchy theme set "$theme" && ok "theme $theme"
+  [[ -f $st/current/theme/backgrounds/$bg ]] && omarchy theme bg set "$st/current/theme/backgrounds/$bg" && ok "background $bg"
+
+  hyprctl reload &>/dev/null
+  omarchy restart shell &>/dev/null
+}
+
+cmd_install() {
+  command -v omarchy >/dev/null || { err "Omarchy not found. Install Omarchy first."; exit 1; }
+  [[ $EUID -eq 0 ]] && { err "Run as your user, not root."; exit 1; }
+  sudo_keepalive
+
+  install_system_tweaks
+  install_packages
+  install_services
+  cmd_link
+  fix_home_paths
+  install_git_clones
+  install_apps
+  install_desktop_state
+
+  step "Done. Manual steps left:"
+  cat <<'EOF'
+  - Log in again:        gh auth login && gh auth setup-git ; claude ; codex
+  - SSH keys:            copy ~/.ssh from a secure backup (not in this repo)
+  - Fingerprint:         omarchy setup security fingerprint
+  - Browser:             sign into Chromium to sync bookmarks/extensions
+  - Monitors:            check ~/.config/hypr/monitors.lua matches this machine's outputs
+  - Fan control (nbfc):  config is for a ThinkPad T14 Gen5; change it on other hardware
+  - Reboot to pick up services, kernel modules and the login manager.
+EOF
+}
+
+case "${1:-}" in
+  install) cmd_install ;;
+  link)    cmd_link ;;
+  adopt)   cmd_adopt ;;
+  sync)    cmd_sync ;;
+  status)  cmd_status ;;
+  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

@@ -1,0 +1,144 @@
+#!/bin/bash
+# Interactive Omarchy app cleaner.
+#   SPACE = select/deselect   ENTER = confirm   ESC = cancel   ctrl-a = toggle all
+set -o pipefail
+DATA=$(mktemp); trap "rm -f $DATA" EXIT; cat > "$DATA" <<'TSVEOF'
+pkg	libreoffice-fresh	421 MiB	GUI · Office	LibreOffice full office suite (Writer/Calc/Impress/Draw/Base/Math)
+pkg	chromium	416 MiB	GUI · Browser	Chromium browser — ⚠ backs Discord/WhatsApp/Zoom web apps, 207M profile in use
+pkg	kdenlive	93 MiB	GUI · Media	Non-linear video editor
+pkg	localsend	67 MiB	GUI · Network	AirDrop-style local file sharing
+pkg	obsidian	25 MiB	GUI · Notes	Markdown knowledge base
+pkg	obs-studio	25 MiB	GUI · Media	Live streaming / screen recording studio
+pkg	pinta	20 MiB	GUI · Graphics	Paint.NET-style image editor (frees dotnet-runtime, +74 MiB)
+pkg	xournalpp	8 MiB	GUI · Notes	Handwriting notes + PDF annotation
+pkg	system-config-printer	8 MiB	GUI · System	Printer config GUI — no printers configured on this machine
+pkg	gnome-disk-utility	7 MiB	GUI · System	GNOME Disks partition manager
+pkg	moonlight-qt	2 MiB	GUI · Gaming	GameStream client for remote PC gaming
+pkg	evince	12 MiB	GUI · Docs	PDF/document viewer — ⚠ required by sushi (Nautilus previewer)
+pkg	nautilus	14 MiB	GUI · Files	GNOME Files — ⚠ Omarchy's default file manager
+pkg	sushi	0.4 MiB	GUI · Files	Quick-preview (spacebar) plugin for Nautilus
+pkg	tensaku	8 MiB	GUI · Screenshot	Screenshot annotation tool — ⚠ wired into Omarchy screenshot keybinds
+pkg	omacalc	297 KiB	GUI · Omarchy	Dead-simple Qt calculator
+pkg	omacut	191 KiB	GUI · Omarchy	Dead-simple video trimmer
+pkg	omawrite	565 KiB	GUI · Omarchy	Dead-simple Markdown writing app
+pkg	imv	240 KiB	GUI · Graphics	Image viewer — ⚠ Omarchy's default image handler
+pkg	mpv	6 MiB	GUI · Media	Media player — ⚠ Omarchy's default video handler
+pkg	mpv-mpris	35 KiB	GUI · Media	MPRIS media-key plugin for mpv
+webapp	Discord	web app	Web app	Discord in a Chromium window
+webapp	WhatsApp	web app	Web app	WhatsApp Web in a Chromium window
+webapp	Zoom	web app	Web app	Zoom launcher/handler
+tui	Docker	launcher	TUI launcher	Desktop entry that opens the Docker TUI
+tui	Disk Usage	launcher	TUI launcher	Desktop entry that opens dua disk-usage browser
+pkg	cliamp	35 MiB	TUI · Audio	Retro Winamp-style terminal music player
+pkg	herdr	18 MiB	TUI · Dev	Terminal workspace manager for AI coding agents
+pkg	lazydocker	13 MiB	TUI · Dev	Terminal UI for Docker
+pkg	lazygit	19 MiB	TUI · Dev	Terminal UI for git
+pkg	btop	2 MiB	TUI · System	Resource monitor
+pkg	cava	195 KiB	TUI · Audio	Console audio visualizer
+pkg	fastfetch	2 MiB	CLI · System	Neofetch-style system info
+pkg	inxi	1 MiB	CLI · System	Full-featured system information tool
+pkg	ttfx	2 MiB	CLI · Fun	Terminal text effects
+pkg	tobi-try	71 KiB	CLI · Dev	Fresh scratch directories — ⚠ pulls in ruby (17 MiB)
+pkg	dua-cli	4 MiB	CLI · System	Fast disk usage browser
+pkg	tldr	126 KiB	CLI · Docs	Simplified man pages
+pkg	yt-dlp	32 MiB	CLI · Media	YouTube/video downloader — ⚠ required by cliamp
+pkg	tesseract-data-eng	22 MiB	CLI · OCR	Tesseract English OCR training data
+pkg	tesseract	5 MiB	CLI · OCR	OCR engine (used by Omarchy screenshot-to-text)
+pkg	zbar	786 KiB	CLI · QR	Barcode/QR reader
+pkg	qrencode	111 KiB	CLI · QR	QR code generator
+pkg	imagemagick	22 MiB	CLI · Graphics	Image manipulation toolkit
+pkg	gpu-screen-recorder	492 KiB	CLI · Media	Shadowplay-style screen recorder
+pkg	hyprpicker	231 KiB	CLI · Graphics	Wayland color picker
+pkg	docker	117 MiB	Dev · Containers	Docker engine
+pkg	docker-buildx	63 MiB	Dev · Containers	Docker BuildKit plugin
+pkg	docker-compose	43 MiB	Dev · Containers	Docker Compose
+pkg	ufw-docker	65 KiB	Dev · Containers	UFW/Docker firewall fix (only useful with Docker)
+pkg	clang	254 MiB	Dev · Toolchain	C/C++/ObjC compiler frontend
+pkg	llvm	131 MiB	Dev · Toolchain	LLVM compiler infrastructure
+pkg	dotnet-runtime	74 MiB	Dev · Runtime	.NET runtime — ⚠ required by pinta
+pkg	ruby	17 MiB	Dev · Runtime	Ruby — ⚠ required by tobi-try
+pkg	mariadb-libs	24 MiB	Dev · DB client	MariaDB/MySQL client libraries
+pkg	postgresql-libs	11 MiB	Dev · DB client	PostgreSQL client libraries
+pkg	tree-sitter-cli	9 MiB	Dev · Toolchain	Tree-sitter parser CLI (used by Neovim grammars)
+pkg	qemu-user-static-binfmt	55 KiB	Dev · Emulation	Cross-arch binfmt rules (for multi-arch Docker builds)
+pkg	python-poetry-core	2 MiB	Dev · Python	Poetry PEP 517 build backend
+pkg	luarocks	7 KiB	Dev · Lua	Lua package manager — ⚠ used by Neovim plugins
+pkg	noto-fonts-cjk	299 MiB	Fonts	Chinese/Japanese/Korean fonts — remove only if you never read CJK
+pkg	yaru-icon-theme	63 MiB	Themes	Ubuntu Yaru icon theme
+pkg	ttf-ia-writer	2 MiB	Fonts	iA Writer font subset
+pkg	fcitx5	18 MiB	Input	CJK/multilingual input method framework — config dir exists
+pkg	fcitx5-gtk	320 KiB	Input	Fcitx5 GTK integration
+pkg	fcitx5-qt	2 MiB	Input	Fcitx5 Qt integration
+pkg	fprintd	910 KiB	Hardware	Fingerprint auth daemon — ⚠ a fingerprint reader IS present
+pkg	libfprint	2 MiB	Hardware	Fingerprint reader library
+pkg	asdcontrol	30 KiB	Hardware	Apple Studio Display brightness — no Apple display detected
+pkg	bolt	439 KiB	Hardware	Thunderbolt device manager
+pkg	ddcutil	3 MiB	Hardware	External monitor brightness over DDC/CI
+pkg	cups-pdf	197 KiB	Printing	Print-to-PDF virtual printer
+pkg	cups-browsed	566 KiB	Printing	Network printer discovery daemon
+pkg	tzupdate	2 MiB	System	Auto-set timezone from IP geolocation
+TSVEOF
+SEP=$'\x1f'
+LINES=""
+while IFS=$'\t' read -r kind id size cat desc; do
+  [[ -z $kind ]] && continue
+  case $kind in
+    pkg)        pacman -Qq "$id" &>/dev/null || continue ;;
+    webapp|tui) [[ -f "$HOME/.local/share/applications/$id.desktop" ]] || continue ;;
+  esac
+  disp=$(printf '%-26s %-18s %10s   %s' "$id" "$cat" "$size" "$desc")
+  LINES+="${kind}${SEP}${id}${SEP}${disp}"$'\n'
+done < "$DATA"
+
+[[ -z $LINES ]] && { echo "Nothing to remove."; exit 0; }
+
+SEL=$(printf '%s' "$LINES" | fzf \
+  --multi --no-sort --reverse --height=100% \
+  --delimiter="$SEP" --with-nth=3 \
+  --marker='x ' --pointer='>' \
+  --color 'pointer:red,marker:red,header:yellow' \
+  --bind 'space:toggle' --bind 'ctrl-a:toggle-all' \
+  --header=$'SPACE toggle  |  ENTER confirm  |  ESC cancel  |  ctrl-a toggle-all  |  type to filter\nA (!) in the description means something else depends on it, or Omarchy uses it.\n')
+
+[[ -z $SEL ]] && { echo "Nothing selected. Aborted."; exit 0; }
+
+PKGS=(); WEBAPPS=(); TUIS=()
+while IFS="$SEP" read -r kind id _; do
+  [[ -z $kind ]] && continue
+  case $kind in
+    pkg)    PKGS+=("$id") ;;
+    webapp) WEBAPPS+=("$id") ;;
+    tui)    TUIS+=("$id") ;;
+  esac
+done <<< "$SEL"
+
+echo
+echo "================ WILL REMOVE ================"
+((${#PKGS[@]}))    && { echo "Packages (pacman -Rns):"; printf '  - %s\n' "${PKGS[@]}"; }
+((${#WEBAPPS[@]})) && { echo "Web apps:";               printf '  - %s\n' "${WEBAPPS[@]}"; }
+((${#TUIS[@]}))    && { echo "TUI launchers:";          printf '  - %s\n' "${TUIS[@]}"; }
+echo "============================================="
+read -rp "Type 'yes' to proceed: " ok
+[[ $ok == yes ]] || { echo "Aborted."; exit 0; }
+
+for w in "${WEBAPPS[@]}"; do omarchy-webapp-remove "$w"; done
+for t in "${TUIS[@]}";    do omarchy-tui-remove "$t"; done
+
+if ((${#PKGS[@]})); then
+  sudo -v || exit 1
+  if ! sudo pacman -Rns "${PKGS[@]}"; then
+    echo
+    echo "Batch removal blocked by a dependency. Retrying individually, skipping blocked ones:"
+    for p in "${PKGS[@]}"; do
+      sudo pacman -Rns --noconfirm "$p" >/dev/null 2>&1 && echo "  removed: $p" || echo "  SKIPPED (still needed): $p"
+    done
+  fi
+  orph=$(pacman -Qtdq 2>/dev/null)
+  if [[ -n $orph ]]; then
+    echo; echo "Removing orphaned dependencies:"; echo "$orph" | sed 's/^/  - /'
+    sudo pacman -Rns --noconfirm $orph
+  fi
+fi
+
+command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null
+echo; echo "Done."; df -h / | tail -1

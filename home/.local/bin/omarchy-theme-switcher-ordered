@@ -1,0 +1,66 @@
+#!/bin/bash
+# Omarchy theme switcher that shows themes in the order from ~/.config/omarchy/theme-order
+# instead of alphabetically. Prints the chosen theme name, like omarchy-theme-switcher.
+#
+# omarchy-menu-images sorts images within a directory but keeps the directories in the
+# order given, so each theme's preview lives in its own directory.
+
+USER_THEMES_PATH="$HOME/.config/omarchy/themes"
+OMARCHY_THEMES_PATH="$OMARCHY_PATH/themes"
+preview_root="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy/theme-selector-ordered"
+
+mkdir -p "$preview_root"
+
+find_preview() {
+  local theme_path="$1"
+  local preview preview_name
+
+  for preview_name in preview.png preview.jpg preview.jpeg preview.webp preview.gif preview.bmp; do
+    preview=$(find -L "$theme_path" -maxdepth 1 -type f -iname "$preview_name" -print -quit 2>/dev/null)
+
+    if [[ -n $preview ]]; then
+      printf '%s\n' "$preview"
+      return
+    fi
+  done
+
+  if [[ -d $theme_path/backgrounds ]]; then
+    find -L "$theme_path/backgrounds" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.webp' \) -print 2>/dev/null | sort | head -n 1
+  fi
+}
+
+current_theme=$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null)
+dirs=()
+selected=""
+declare -A keep
+
+while IFS= read -r theme; do
+  preview=""
+  [[ -d $USER_THEMES_PATH/$theme ]] && preview=$(find_preview "$USER_THEMES_PATH/$theme")
+  [[ -z $preview && -d $OMARCHY_THEMES_PATH/$theme ]] && preview=$(find_preview "$OMARCHY_THEMES_PATH/$theme")
+  [[ -n $preview ]] || continue
+
+  extension="${preview##*.}"
+  link="$preview_root/$theme/$theme.${extension,,}"
+
+  # Only touch the link when it changed, so the image menu's row cache stays valid.
+  if [[ $(readlink "$link" 2>/dev/null) != "$preview" ]]; then
+    rm -rf "$preview_root/$theme"
+    mkdir -p "$preview_root/$theme"
+    ln -s "$preview" "$link"
+  fi
+
+  keep[$theme]=1
+  dirs+=("$preview_root/$theme")
+  [[ $theme == "$current_theme" ]] && selected="$link"
+done < <(omarchy-theme-list-ordered)
+
+# Drop previews of themes that were removed.
+for dir in "$preview_root"/*/; do
+  dir=${dir%/}
+  [[ -d $dir && -z ${keep[${dir##*/}]} ]] && rm -rf "$dir"
+done
+
+(( ${#dirs[@]} > 0 )) || exit 1
+
+exec omarchy-menu-images --print-name --show-labels --filterable --lazy-thumbnails --selected "$selected" "${dirs[@]}"

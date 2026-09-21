@@ -1,0 +1,55 @@
+/* Omarchy "Neon Purple" — deep black surfaces with purple accents.
+   Applies to GTK4/libadwaita apps (Nautilus, dialogs, etc). */
+
+/* --- Accents --- */
+@define-color accent_color            #cc8ef3;
+@define-color accent_bg_color         #a15cd5;
+@define-color accent_fg_color         #0a0410;
+
+/* --- Windows --- */
+@define-color window_bg_color         #060209;
+@define-color window_fg_color         #e6d8f7;
+
+/* --- Content views (the file list) — deepest black --- */
+@define-color view_bg_color           #030105;
+@define-color view_fg_color           #e6d8f7;
+
+/* --- Header bars --- */
+@define-color headerbar_bg_color       #0a0410;
+@define-color headerbar_fg_color       #e6d8f7;
+@define-color headerbar_border_color   #2b1642;
+@define-color headerbar_backdrop_color #060209;
+@define-color headerbar_shade_color    rgba(0, 0, 0, 0.6);
+
+/* --- Sidebar --- */
+@define-color sidebar_bg_color            #060209;
+@define-color sidebar_fg_color            #cbb2e8;
+@define-color sidebar_backdrop_color      #030105;
+@define-color sidebar_border_color        #2b1642;
+@define-color sidebar_shade_color         rgba(0, 0, 0, 0.6);
+@define-color secondary_sidebar_bg_color  #060209;
+@define-color secondary_sidebar_fg_color  #cbb2e8;
+
+/* --- Cards, popovers, dialogs --- */
+@define-color card_bg_color      #120a1c;
+@define-color card_fg_color      #e6d8f7;
+@define-color card_shade_color   rgba(0, 0, 0, 0.6);
+@define-color popover_bg_color   #100819;
+@define-color popover_fg_color   #e6d8f7;
+@define-color dialog_bg_color    #0a0410;
+@define-color dialog_fg_color    #e6d8f7;
+
+/* --- Borders and status colors, kept in the purple family --- */
+@define-color borders               #2b1642;
+@define-color destructive_color     #de6bff;
+@define-color destructive_bg_color  #c13ae0;
+@define-color destructive_fg_color  #0a0410;
+@define-color success_color         #a887ff;
+@define-color success_bg_color      #7b52e8;
+@define-color success_fg_color      #0a0410;
+@define-color warning_color         #d7b6ff;
+@define-color warning_bg_color      #b98cf2;
+@define-color warning_fg_color      #0a0410;
+@define-color error_color           #de6bff;
+@define-color error_bg_color        #c13ae0;
+@define-color error_fg_color        #0a0410;

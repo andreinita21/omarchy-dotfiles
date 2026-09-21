@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=WhatsApp
+Comment=WhatsApp
+Exec=omarchy-launch-or-focus-webapp chrome-web.whatsapp.com__-Default "https://web.whatsapp.com/"
+Terminal=false
+Type=Application
+Icon=whatsapp
+StartupNotify=true
+StartupWMClass=chrome-web.whatsapp.com__-Default

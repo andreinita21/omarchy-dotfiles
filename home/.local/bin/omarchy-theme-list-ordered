@@ -1,0 +1,28 @@
+#!/bin/bash
+# List installed theme folder names in the order from ~/.config/omarchy/theme-order.
+# Themes not in that file follow alphabetically; listed themes that no longer exist are skipped.
+
+order_file="$HOME/.config/omarchy/theme-order"
+
+mapfile -t installed < <({
+  find "$HOME/.config/omarchy/themes" -mindepth 1 -maxdepth 1 \( -type d -o -type l \) -printf '%f\n'
+  find "$OMARCHY_PATH/themes" -mindepth 1 -maxdepth 1 -type d -printf '%f\n'
+} 2>/dev/null | sort -u)
+
+declare -A present seen
+for theme in "${installed[@]}"; do present[$theme]=1; done
+
+if [[ -f $order_file ]]; then
+  while IFS= read -r theme; do
+    theme=${theme%%#*}
+    theme=${theme//[[:space:]]/}
+    [[ -n $theme && -n ${present[$theme]} && -z ${seen[$theme]} ]] || continue
+    seen[$theme]=1
+    printf '%s\n' "$theme"
+  done <"$order_file"
+fi
+
+for theme in "${installed[@]}"; do
+  [[ -z ${seen[$theme]} ]] && printf '%s\n' "$theme"
+done
+exit 0

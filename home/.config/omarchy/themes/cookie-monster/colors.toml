@@ -1,0 +1,40 @@
+# Cookie Monster — blue gradient theme
+# Palette sampled from backgrounds/1-cookie-monster.jpeg:
+#   fur blue #1d9acd / #218ec4 / #1c5a99, screen glow #57c2cf / #78cf73,
+#   cookie #e59a53 / #af6a42, night background #11172b / #020203
+
+mode = "dark"
+
+accent    = "#35b3e8"
+selection = "#1c3d63"
+muted     = "#42688f"
+
+# Multi-stop blue gradients: deep fur blue -> monster blue -> screen-glow cyan
+hyprland_active_border   = "rgba(1c5a99ee) rgba(1d9acdee) rgba(57c2cfee) 45deg"
+hyprland_inactive_border = "rgba(0d1c33aa) rgba(17315faa) 45deg"
+
+background         = "#0a1222"
+dark_background    = "#050a16"
+darker_background  = "#01030a"
+lighter_background = "#14243f"
+
+foreground        = "#d6ecfa"
+dark_foreground   = "#5b7fa3"
+light_foreground  = "#a8cfe8"
+bright_foreground = "#f2fbff"
+
+red     = "#e8628c"
+yellow  = "#e59a53"
+orange  = "#d98a4e"
+green   = "#6ccf88"
+cyan    = "#57c2cf"
+blue    = "#1d9acd"
+magenta = "#9b8cf0"
+brown   = "#8a5a38"
+
+bright_red     = "#ff7ea6"
+bright_yellow  = "#f5bd7e"
+bright_green   = "#8fe3a6"
+bright_cyan    = "#7ddfe9"
+bright_blue    = "#35b3e8"
+bright_magenta = "#b6a8ff"

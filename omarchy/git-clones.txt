@@ -1,0 +1,6 @@
+themes/matrix https://github.com/BVisagie/omarchy-matrix-theme
+themes/neon-dusk https://github.com/daniel-felipe/omarchy-neon-dusk-theme
+plugins/charlieras262.omablur https://github.com/Charlieras262/omarchy-omablur.git
+plugins/custom.media https://github.com/Clifford-Baidoo/Omarchy-music-flow.git
+plugins/io.github.thisisgm.omapods https://github.com/thisisgm/omarchy-pods
+plugins/kshatriya-abhay.nbfc https://github.com/kshatriya-abhay/omarchy-nbfc-linux-plugin

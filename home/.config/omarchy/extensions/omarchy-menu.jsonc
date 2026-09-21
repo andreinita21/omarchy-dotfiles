@@ -1,0 +1,94 @@
+{
+  // Extend the Quickshell Omarchy menu with JSONC.
+  //
+  // IDs are object keys. The parent is inferred from the dotted id, so
+  // "personal.notes" appears under "personal", and "personal" appears on the
+  // root menu. Reuse an existing id to override/extend it.
+  //
+  // Fields:
+  //   icon        Nerd Font glyph shown in the icon column.
+  //   label       Visible row title.
+  //   action      Shell command to run. If omitted, the row is a submenu.
+  //   target      Existing submenu id to open. Use for links/aliases.
+  //   provider    Runtime provider function/command returning JSON rows.
+  //   aliases     alternate `omarchy menu summon <name>` routes; also searchable.
+  //   description Optional subtitle and extra search text.
+  //   when        Shell condition; hide row when it fails.
+  //   checked     Shell condition; append ✓ when it succeeds.
+  //
+  // Examples:
+  // "personal": {"icon":"","label":"Personal"},
+  // "personal.notes": {"icon":"󰎞","label":"Notes","action":"omarchy-launch-editor ~/notes"},
+  // "personal.files": {"icon":"","label":"Files","action":"uwsm-app -- nautilus ~/Documents"},
+  //
+  // Only use provider when a provider_name function or command named "name"
+  // returns JSON rows. Static submenus only need dotted ids.
+  //
+  // Example: replace the default About action by reusing the same id. Existing
+  // fields are kept unless overridden.
+  // "about": {"icon":"","label":"About","action":"omarchy-launch-or-focus-tui \"zsh -c 'fastfetch; read -k 1'\""},
+
+  // Theme picker in the order from ~/.config/omarchy/theme-order instead of alphabetical.
+  // Overrides replace unset fields with blanks, so icon/label/aliases are repeated
+  // here; the "theme" alias is what SUPER+SHIFT+CTRL+SPACE summons.
+  "style.theme": {"icon":"󰸌","label":"Theme","aliases":["theme","themes"],"action":"theme=$(/home/andrei/.local/bin/omarchy-theme-switcher-ordered); [[ -n $theme ]] && omarchy-theme-set \"$theme\""},
+
+  // Desktop transitions, chosen separately for theme and wallpaper changes.
+  // Stored by omarchy-transition, applied by the andrei.background plugin.
+  "style.transitions": {"icon":"󰕧","label":"Transitions","aliases":["transition","transitions"]},
+  "style.transitions.theme": {"icon":"󰸌","label":"Theme Change"},
+  "style.transitions.theme.none": {"icon": "󰜺", "label": "None", "description": "Switch instantly", "action": "/home/andrei/.local/bin/omarchy-transition theme none", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == none ]]"},
+  "style.transitions.theme.fade": {"icon": "󰘚", "label": "Fade", "description": "Cross-fade", "action": "/home/andrei/.local/bin/omarchy-transition theme fade", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == fade ]]"},
+  "style.transitions.theme.blinds": {"icon": "󰕰", "label": "Blinds", "description": "Slanted slats opening together", "action": "/home/andrei/.local/bin/omarchy-transition theme blinds", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == blinds ]]"},
+  "style.transitions.theme.wipe": {"icon": "󰁂", "label": "Wipe", "description": "Omarchy's stock slanted wipe from the centre", "action": "/home/andrei/.local/bin/omarchy-transition theme wipe", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == wipe ]]"},
+  "style.transitions.theme.circle": {"icon": "󰝥", "label": "Circle", "description": "Iris growing from the centre", "action": "/home/andrei/.local/bin/omarchy-transition theme circle", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == circle ]]"},
+  "style.transitions.theme.clock": {"icon": "󰥔", "label": "Clock", "description": "Radial sweep like a clock hand", "action": "/home/andrei/.local/bin/omarchy-transition theme clock", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == clock ]]"},
+  "style.transitions.theme.slide": {"icon": "󰁔", "label": "Slide", "description": "New wallpaper slides in from the right", "action": "/home/andrei/.local/bin/omarchy-transition theme slide", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == slide ]]"},
+  "style.transitions.theme.zoom": {"icon": "󰍉", "label": "Zoom", "description": "Fade in while settling from a slight zoom", "action": "/home/andrei/.local/bin/omarchy-transition theme zoom", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == zoom ]]"},
+  "style.transitions.theme.tiles": {"icon": "󰋁", "label": "Tiles", "description": "Random squares popping in", "action": "/home/andrei/.local/bin/omarchy-transition theme tiles", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == tiles ]]"},
+  "style.transitions.theme.bars": {"icon": "󰕭", "label": "Bars", "description": "Vertical strips dropping in", "action": "/home/andrei/.local/bin/omarchy-transition theme bars", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == bars ]]"},
+  "style.transitions.theme.random": {"icon": "󰒝", "label": "Random", "description": "A different effect every time", "action": "/home/andrei/.local/bin/omarchy-transition theme random", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition theme) == random ]]"},
+  "style.transitions.background": {"icon":"","label":"Wallpaper Change"},
+  "style.transitions.background.none": {"icon": "󰜺", "label": "None", "description": "Switch instantly", "action": "/home/andrei/.local/bin/omarchy-transition background none", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == none ]]"},
+  "style.transitions.background.fade": {"icon": "󰘚", "label": "Fade", "description": "Cross-fade", "action": "/home/andrei/.local/bin/omarchy-transition background fade", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == fade ]]"},
+  "style.transitions.background.blinds": {"icon": "󰕰", "label": "Blinds", "description": "Slanted slats opening together", "action": "/home/andrei/.local/bin/omarchy-transition background blinds", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == blinds ]]"},
+  "style.transitions.background.wipe": {"icon": "󰁂", "label": "Wipe", "description": "Omarchy's stock slanted wipe from the centre", "action": "/home/andrei/.local/bin/omarchy-transition background wipe", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == wipe ]]"},
+  "style.transitions.background.circle": {"icon": "󰝥", "label": "Circle", "description": "Iris growing from the centre", "action": "/home/andrei/.local/bin/omarchy-transition background circle", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == circle ]]"},
+  "style.transitions.background.clock": {"icon": "󰥔", "label": "Clock", "description": "Radial sweep like a clock hand", "action": "/home/andrei/.local/bin/omarchy-transition background clock", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == clock ]]"},
+  "style.transitions.background.slide": {"icon": "󰁔", "label": "Slide", "description": "New wallpaper slides in from the right", "action": "/home/andrei/.local/bin/omarchy-transition background slide", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == slide ]]"},
+  "style.transitions.background.zoom": {"icon": "󰍉", "label": "Zoom", "description": "Fade in while settling from a slight zoom", "action": "/home/andrei/.local/bin/omarchy-transition background zoom", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == zoom ]]"},
+  "style.transitions.background.tiles": {"icon": "󰋁", "label": "Tiles", "description": "Random squares popping in", "action": "/home/andrei/.local/bin/omarchy-transition background tiles", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == tiles ]]"},
+  "style.transitions.background.bars": {"icon": "󰕭", "label": "Bars", "description": "Vertical strips dropping in", "action": "/home/andrei/.local/bin/omarchy-transition background bars", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == bars ]]"},
+  "style.transitions.background.random": {"icon": "󰒝", "label": "Random", "description": "A different effect every time", "action": "/home/andrei/.local/bin/omarchy-transition background random", "checked": "[[ $(/home/andrei/.local/bin/omarchy-transition background) == random ]]"},
+
+  // Bar appearance: the three modes from omarchy-bar-mode, replacing the
+  // stock on/off Transparency toggle.
+  "style.bar.transparency": {"icon":"󰂵","label":"Transparency"},
+  "style.bar.transparency.transparent": {"icon": "󰂵", "label": "Transparent", "description": "No bar background on any theme", "action": "/home/andrei/.local/bin/omarchy-bar-mode transparent", "checked": "[[ $(cat ~/.local/state/omarchy/bar-mode 2>/dev/null || echo transparent) == transparent ]]"},
+  "style.bar.transparency.blur": {"icon": "󰂶", "label": "Blur", "description": "Dark scrim with the wallpaper blurred behind", "action": "/home/andrei/.local/bin/omarchy-bar-mode blur", "checked": "[[ $(cat ~/.local/state/omarchy/bar-mode 2>/dev/null || echo transparent) == blur ]]"},
+  "style.bar.transparency.oled": {"icon": "󰝤", "label": "OLED", "description": "Pure black", "action": "/home/andrei/.local/bin/omarchy-bar-mode oled", "checked": "[[ $(cat ~/.local/state/omarchy/bar-mode 2>/dev/null || echo transparent) == oled ]]"},
+
+  // Window gaps: slider popup from the andrei.gaps plugin.
+  "style.gaps": {"icon":"󰕰","label":"Window Gaps","aliases":["gaps","margins"],"description":"Screen margins and space between windows","action":"omarchy-shell shell summon andrei.gaps '{}'"},
+  "style.rounding-blur": {"icon":"󰂵","label":"Rounding & Blur","aliases":["blur","rounding","corners"],"description":"Window corner rounding and blur intensity","action":"omarchy-shell shell summon andrei.rounding-blur '{}'"},
+
+  // Root menu order: Apps, Style, Setup, Update, Install, Remove, Trigger, System.
+  // Defaults can't be reordered, so the stock rows are hidden and re-added
+  // below as links to the same submenus. Learn and About are removed.
+  "learn": {"when":"false"},
+  "about": {"when":"false"},
+  "trigger": {"when":"false"},
+  "style": {"when":"false"},
+  "setup": {"when":"false"},
+  "install": {"when":"false"},
+  "remove": {"when":"false"},
+  "update": {"when":"false"},
+  "system": {"when":"false"},
+  "my-style": {"icon":"","label":"Style","target":"style"},
+  "my-setup": {"icon":"","label":"Setup","target":"setup"},
+  "my-update": {"icon":"","label":"Update","target":"update"},
+  "my-install": {"icon":"󰉉","label":"Install","target":"install"},
+  "my-remove": {"icon":"󰭌","label":"Remove","target":"remove"},
+  "my-trigger": {"icon":"󱓞","label":"Trigger","target":"trigger"},
+  "my-system": {"icon":"","label":"System","target":"system"},
+}

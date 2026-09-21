@@ -1,0 +1,3 @@
+aether
+obsidian
+ufw-docker
