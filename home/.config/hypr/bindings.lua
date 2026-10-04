@@ -111,3 +111,11 @@ o.bind("SUPER + CTRL + DOWN", "Previous bar mode", "/home/andrei/.local/bin/omar
 -- file probe that could get out of sync on rapid presses.
 hl.unbind("SUPER + SHIFT + SPACE")
 o.bind("SUPER + SHIFT + SPACE", "Toggle top bar", "/home/andrei/.local/bin/omarchy-bar-toggle")
+
+-- Lid switch: Omarchy's handling plus Stay Awake (coffee) support -- with it on,
+-- closing the lid blanks the panel and the machine keeps running instead of
+-- suspending (andrei.idle holds the logind lid inhibitor).
+hl.unbind("switch:on:Lid Switch")
+hl.unbind("switch:off:Lid Switch")
+o.bind("switch:on:Lid Switch", nil, "andrei-lid-close", { locked = true })
+o.bind("switch:off:Lid Switch", nil, "andrei-lid-open", { locked = true })

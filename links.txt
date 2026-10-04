@@ -68,6 +68,8 @@
 .local/bin/omarchy-theme-switcher-ordered
 .local/bin/omarchy-transition
 .local/bin/chromium-violet-dark
+.local/bin/andrei-lid-close
+.local/bin/andrei-lid-open
 
 # AI agent launchers (lazy mise installers)
 .local/bin/claude
