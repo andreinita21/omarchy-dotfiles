@@ -8,4 +8,5 @@ Since 2026-09-21, ~/dotfiles holds the user's full Omarchy setup (public repo an
 
 **Why:** the user wants to replicate this exact machine on other Omarchy installs.
 **How to apply:** after changing configs or installing/removing packages, suggest `cd ~/dotfiles && ./dot sync && git commit -am … && git push`. New config dirs must be added to `links.txt` + `./dot adopt`. Secrets inside tracked dirs go in the secrets section of `write_gitignore` in `dot`.
+**Private vault:** accounts/sessions/keyring/Wi-Fi go in a GPG-encrypted snapshot pushed to private repo andreinita21/omarchy-vault via `./dot vault save` (lists in vault/*.txt). New credential/session paths go in vault/include.txt, never links.txt.
 **Public repo:** never track anything private (credentials, private-project notes); run ./dot sync's secret scan before every push.
