@@ -53,8 +53,11 @@ logo, install.sh and art/render.sh. The user wants to be the sole author:
 commit as `Nita Andrei <61935070+andreinita21@users.noreply.github.com>`
 with NO Claude co-author/attribution lines. Keep repo and live copies in sync.
 
-**Screensaver:** purple/pink via `andrei.idle` (clone of omarchy.idle, one
-line changed to run `andrei-launch-screensaver`) + ~/.local/bin scripts
+**Screensaver:** purple/pink via `andrei.idle` (clone of omarchy.idle, changed
+to run `andrei-launch-screensaver`; since 2026-10-04 it also holds a logind
+handle-lid-switch inhibitor while Stay Awake/coffee is on, and bindings.lua
+routes the lid to ~/.local/bin/andrei-lid-close/-open, which blank the panel
+so agents keep running with the lid shut; shipped in both repos) + ~/.local/bin scripts
 `andrei-launch-screensaver` (sed-wraps Omarchy's launcher) and
 `andrei-screensaver` (per-effect ttfx colors). Shadowing omarchy-screensaver
 on PATH does NOT work: the session PATH puts /usr/share/omarchy/bin first.
