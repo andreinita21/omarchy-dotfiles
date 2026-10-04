@@ -1,0 +1,7 @@
+# Root-owned private state packed (with sudo) into the vault.
+# Wi-Fi networks and passwords
+/etc/NetworkManager/system-connections
+/var/lib/iwd
+# Bluetooth pairings (AirPods, mouse, ...). Pairing keys are bound to the
+# Bluetooth adapter, so these only take effect on the same machine.
+/var/lib/bluetooth

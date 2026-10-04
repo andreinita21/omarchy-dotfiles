@@ -74,7 +74,7 @@ o.bind("SUPER + SHIFT + N", "Neovim", { tui = "nvim" })
 -- SUPER+CTRL+SHIFT+S. SUPER+SHIFT+L had no default binding; SUPER+CTRL+L
 -- still locks too.
 o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
-o.bind("SUPER + CTRL + SHIFT + S", "Screensaver", "omarchy-launch-screensaver force")
+o.bind("SUPER + CTRL + SHIFT + S", "Screensaver", "andrei-launch-screensaver force")
 o.bind("SUPER + SHIFT + L", "Lock screen", "omarchy-system-lock")
 
 -- omadrop:bindings:start

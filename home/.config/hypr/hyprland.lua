@@ -24,6 +24,7 @@ require("hypr.looknfeel")
 require("hypr.barmode")
 require("hypr.autostart")
 
+
 -- Toggle config flags dynamically.
 require("default.hypr.toggles")
 
@@ -35,3 +36,6 @@ require("default.hypr.toggles")
 -- copy of that face (~/.local/share/fonts/JetBrainsMonoHeavy-Regular.ttf), so it
 -- is the only weight Qt can pick. Needs `omarchy restart shell` to apply.
 hl.env("OMARCHY_MENU_FONT", "JetBrainsMono Heavy")
+
+-- OmaOptions: per-device scroll speed for the Logitech mouse (omaoptions apply).
+require("default.hypr.require_optional").module("hypr.omaoptions")

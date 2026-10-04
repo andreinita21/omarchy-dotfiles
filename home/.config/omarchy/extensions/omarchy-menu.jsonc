@@ -91,4 +91,7 @@
   "my-remove": {"icon":"󰭌","label":"Remove","target":"remove"},
   "my-trigger": {"icon":"󱓞","label":"Trigger","target":"trigger"},
   "my-system": {"icon":"","label":"System","target":"system"},
+
+  // ANDREI NITA purple/pink screensaver instead of the stock one.
+  "system.screensaver": {"icon":"󱄄","label":"Screensaver","action":"andrei-launch-screensaver force"},
 }

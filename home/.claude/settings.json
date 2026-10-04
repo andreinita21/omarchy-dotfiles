@@ -1,9 +1,19 @@
 {
-  "model": "opus[1m]",
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "statusLine": {
     "type": "command",
     "command": "bash /home/andrei/.claude/statusline-command.sh",
     "refreshInterval": 2
+  },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    },
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    }
   },
   "skipDangerousModePermissionPrompt": true,
   "theme": "custom:omarchy",

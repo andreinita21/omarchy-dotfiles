@@ -1,0 +1,187 @@
+{
+  "discovered": {
+    "at": "2026-09-22 22:24:27",
+    "devices": [
+      {
+        "battery": 85,
+        "charging": true,
+        "full": false,
+        "keys": [
+          {
+            "cid": 80,
+            "divertable": false,
+            "name": "Left Button"
+          },
+          {
+            "cid": 81,
+            "divertable": false,
+            "name": "Right Button"
+          },
+          {
+            "cid": 82,
+            "divertable": true,
+            "name": "Middle Button"
+          },
+          {
+            "cid": 83,
+            "divertable": true,
+            "name": "Back Button"
+          },
+          {
+            "cid": 86,
+            "divertable": true,
+            "name": "Forward Button"
+          },
+          {
+            "cid": 195,
+            "divertable": true,
+            "name": "Mouse Gesture Button"
+          },
+          {
+            "cid": 196,
+            "divertable": true,
+            "name": "Smart Shift"
+          },
+          {
+            "cid": 215,
+            "divertable": true,
+            "name": "Virtual Gesture Button"
+          }
+        ],
+        "kind": "mouse",
+        "link": "receiver",
+        "name": "MX Master 3S",
+        "offline": false,
+        "online": true
+      },
+      {
+        "battery": 95,
+        "charging": false,
+        "full": false,
+        "keys": [
+          {
+            "cid": 209,
+            "divertable": false,
+            "name": "Host Switch Channel 1"
+          },
+          {
+            "cid": 210,
+            "divertable": false,
+            "name": "Host Switch Channel 2"
+          },
+          {
+            "cid": 211,
+            "divertable": false,
+            "name": "Host Switch Channel 3"
+          },
+          {
+            "cid": 226,
+            "divertable": true,
+            "name": "Backlight Down"
+          },
+          {
+            "cid": 227,
+            "divertable": true,
+            "name": "Backlight Up"
+          },
+          {
+            "cid": 259,
+            "divertable": true,
+            "name": "Dictation"
+          },
+          {
+            "cid": 264,
+            "divertable": true,
+            "name": "Emoji"
+          },
+          {
+            "cid": 266,
+            "divertable": true,
+            "name": "Screen Capture"
+          },
+          {
+            "cid": 284,
+            "divertable": true,
+            "name": "Mute Microphone"
+          },
+          {
+            "cid": 229,
+            "divertable": true,
+            "name": "Play/Pause"
+          },
+          {
+            "cid": 231,
+            "divertable": true,
+            "name": "Mute Sound"
+          },
+          {
+            "cid": 232,
+            "divertable": true,
+            "name": "Volume Down"
+          },
+          {
+            "cid": 233,
+            "divertable": true,
+            "name": "Volume Up"
+          },
+          {
+            "cid": 279,
+            "divertable": true,
+            "name": "Delete"
+          },
+          {
+            "cid": 222,
+            "divertable": false,
+            "name": "F Lock"
+          },
+          {
+            "cid": 52,
+            "divertable": false,
+            "name": "FN Key"
+          }
+        ],
+        "kind": "keyboard",
+        "link": "receiver",
+        "name": "MX Keys Mini",
+        "offline": false,
+        "online": true
+      }
+    ]
+  },
+  "lastApply": {
+    "at": "2026-09-24 14:10:05",
+    "notes": [
+      "wrote /home/andrei/.config/solaar/rules.yaml (10 rules for 2 device(s))",
+      "hyprland reloaded (scroll factors: logitech-usb-receiver-mouse=1)",
+      "MX Master 3S pointer speed: dpi=1000",
+      "MX Master 3S smooth scrolling: hires-smooth-resolution=false",
+      "MX Master 3S wheel direction: hires-smooth-invert=false",
+      "MX Master 3S wheel diversion: hires-scroll-mode=false",
+      "MX Master 3S ratchet: scroll-ratchet=Ratcheted",
+      "MX Master 3S SmartShift sensitivity: smart-shift=10",
+      "MX Master 3S thumb wheel direction: thumb-scroll-invert=false",
+      "MX Master 3S thumb wheel: thumb-scroll-mode=true",
+      "MX Master 3S gesture button: divert-keys=Mouse Gesture Button Mouse Gestures",
+      "MX Master 3S wheel click: divert-keys=Middle Button Regular",
+      "MX Master 3S back button: divert-keys=Back Button Regular",
+      "MX Master 3S forward button: divert-keys=Forward Button Regular",
+      "MX Master 3S mode shift (top button): divert-keys=Smart Shift Regular",
+      "MX Keys Mini f4 \u00b7 backlight down: divert-keys=Backlight Down Regular",
+      "MX Keys Mini f5 \u00b7 backlight up: divert-keys=Backlight Up Regular",
+      "MX Keys Mini f6 \u00b7 dictation: divert-keys=Dictation Regular",
+      "MX Keys Mini f7 \u00b7 emoji: divert-keys=Emoji Diverted",
+      "MX Keys Mini f8 \u00b7 screen capture: divert-keys=Screen Capture Diverted",
+      "MX Keys Mini f9 \u00b7 mic mute: divert-keys=Mute Microphone Diverted",
+      "MX Keys Mini f10 \u00b7 play / pause: divert-keys=Play/Pause Regular",
+      "MX Keys Mini mute: divert-keys=Mute Sound Regular",
+      "MX Keys Mini f11 \u00b7 volume down: divert-keys=Volume Down Regular",
+      "MX Keys Mini f12 \u00b7 volume up: divert-keys=Volume Up Regular",
+      "MX Keys Mini delete: divert-keys=Delete Regular",
+      "MX Keys Mini top row: fn-swap=true",
+      "MX Keys Mini backlight: backlight=Automatic",
+      "engine restarted"
+    ],
+    "warnings": []
+  },
+  "polkitOk": true
+}

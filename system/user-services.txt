@@ -1,0 +1,15 @@
+bt-agent.service
+gnome-keyring-daemon.socket
+librepods.service
+omaoptions.service
+omarchy-crash-watch.service
+omarchy-fcitx5.service
+omarchy-migrate-notify.service
+omarchy-recover-internal-monitor.service
+omarchy-sleep-lock.service
+p11-kit-server.socket
+pipewire-pulse.service
+pipewire-pulse.socket
+pipewire.socket
+wireplumber.service
+xdg-user-dirs.service

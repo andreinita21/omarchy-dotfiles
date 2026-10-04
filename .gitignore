@@ -12,6 +12,8 @@ home/.config/omarchy/plugins/*/daemon/build/
 # Git-cloned themes/plugins (re-cloned from omarchy/git-clones.txt)
 home/.config/omarchy/themes/matrix/
 home/.config/omarchy/themes/neon-dusk/
+home/.config/omarchy/plugins/andreinita21.omamonitor/
+home/.config/omarchy/plugins/andreinita21.omaoptions/
 home/.config/omarchy/plugins/charlieras262.omablur/
 home/.config/omarchy/plugins/custom.media/
 home/.config/omarchy/plugins/io.github.thisisgm.omapods/

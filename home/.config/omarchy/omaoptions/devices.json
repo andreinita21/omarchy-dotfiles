@@ -1,0 +1,168 @@
+{
+  "at": 1791002153.3312469,
+  "devices": [
+    {
+      "keys": [
+        {
+          "cid": 80,
+          "divertable": false,
+          "name": "Left Button"
+        },
+        {
+          "cid": 81,
+          "divertable": false,
+          "name": "Right Button"
+        },
+        {
+          "cid": 82,
+          "divertable": true,
+          "name": "Middle Button"
+        },
+        {
+          "cid": 83,
+          "divertable": true,
+          "name": "Back Button"
+        },
+        {
+          "cid": 86,
+          "divertable": true,
+          "name": "Forward Button"
+        },
+        {
+          "cid": 195,
+          "divertable": true,
+          "name": "Mouse Gesture Button"
+        },
+        {
+          "cid": 196,
+          "divertable": true,
+          "name": "Smart Shift"
+        },
+        {
+          "cid": 215,
+          "divertable": true,
+          "name": "Virtual Gesture Button"
+        }
+      ],
+      "kind": "mouse",
+      "link": "receiver",
+      "name": "MX Master 3S",
+      "online": true,
+      "serial": "3997FD0C",
+      "settings": [
+        "change-host",
+        "divert-keys",
+        "dpi",
+        "hires-scroll-mode",
+        "hires-smooth-invert",
+        "hires-smooth-resolution",
+        "reprogrammable-keys",
+        "scroll-ratchet",
+        "smart-shift",
+        "thumb-scroll-invert",
+        "thumb-scroll-mode"
+      ]
+    },
+    {
+      "keys": [
+        {
+          "cid": 209,
+          "divertable": false,
+          "name": "Host Switch Channel 1"
+        },
+        {
+          "cid": 210,
+          "divertable": false,
+          "name": "Host Switch Channel 2"
+        },
+        {
+          "cid": 211,
+          "divertable": false,
+          "name": "Host Switch Channel 3"
+        },
+        {
+          "cid": 226,
+          "divertable": true,
+          "name": "Backlight Down"
+        },
+        {
+          "cid": 227,
+          "divertable": true,
+          "name": "Backlight Up"
+        },
+        {
+          "cid": 259,
+          "divertable": true,
+          "name": "Dictation"
+        },
+        {
+          "cid": 264,
+          "divertable": true,
+          "name": "Emoji"
+        },
+        {
+          "cid": 266,
+          "divertable": true,
+          "name": "Screen Capture"
+        },
+        {
+          "cid": 284,
+          "divertable": true,
+          "name": "Mute Microphone"
+        },
+        {
+          "cid": 229,
+          "divertable": true,
+          "name": "Play/Pause"
+        },
+        {
+          "cid": 231,
+          "divertable": true,
+          "name": "Mute Sound"
+        },
+        {
+          "cid": 232,
+          "divertable": true,
+          "name": "Volume Down"
+        },
+        {
+          "cid": 233,
+          "divertable": true,
+          "name": "Volume Up"
+        },
+        {
+          "cid": 279,
+          "divertable": true,
+          "name": "Delete"
+        },
+        {
+          "cid": 222,
+          "divertable": false,
+          "name": "F Lock"
+        },
+        {
+          "cid": 52,
+          "divertable": false,
+          "name": "FN Key"
+        }
+      ],
+      "kind": "keyboard",
+      "link": "receiver",
+      "name": "MX Keys Mini",
+      "online": true,
+      "serial": "CFCA291D",
+      "settings": [
+        "backlight",
+        "backlight_duration_hands_in",
+        "backlight_duration_hands_out",
+        "backlight_duration_powered",
+        "backlight_level",
+        "change-host",
+        "disable-keyboard-keys",
+        "divert-keys",
+        "fn-swap",
+        "multiplatform"
+      ]
+    }
+  ]
+}

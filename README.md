@@ -68,6 +68,7 @@ finishes it prints the few steps that can't be automated. Reboot afterwards.
 | 7 | Clones third-party themes and shell plugins, builds the AirPods daemon | `omarchy/git-clones.txt` |
 | 8 | Installs mise tools, ble.sh, rustup and omadrop | [`dot`](dot) |
 | 9 | Removes the deleted default web apps, loads GTK settings, applies theme and wallpaper | `omarchy/apps-remove.txt`, `dconf.ini`, `state/` |
+| 10 | Offers to restore the encrypted private vault (see below) | private repo `omarchy-vault` |
 
 Files replaced during linking are moved to
 `~/.local/state/dotfiles-backup/<timestamp>/`. Nothing is overwritten in place.
@@ -86,6 +87,33 @@ git push
 
 On another machine: `git pull && ./dot install`.
 
+## Private vault (accounts and sessions)
+
+Everything that can't be public lives in an **encrypted vault** kept in a
+separate *private* repository (`andreinita21/omarchy-vault`). This repository
+only holds the lists of what goes in it (`vault/`).
+
+| In the vault | Why |
+|---|---|
+| GNOME keyring | GitHub CLI token, Chromium's cookie key, Zed login |
+| Chromium profile (minus caches) | logged-in sites, saved passwords, tabs, history, extensions, WhatsApp Web |
+| Claude Code, Codex, Hermes, Pi | logins, conversation history, plugins |
+| `~/.ssh`, `~/.gnupg`, `.netrc`, cloud CLIs | keys and tokens, when present |
+| Zed, LocalSend, zoxide, bash history | app state and sessions |
+| Wi-Fi networks, Bluetooth pairings | from `/etc` and `/var/lib` (needs sudo) |
+| List of git repos in `$HOME` | lets `./dot vault repos` re-clone your projects (no local files are stored) |
+
+```bash
+./dot vault save            # pack, encrypt (asks for a passphrase), push
+./dot vault save /mnt/usb   # or write to a directory instead
+./dot vault restore         # download, decrypt and restore (run by install)
+```
+
+The vault is encrypted with GPG (AES256, a passphrase you choose) **and** stored
+in a private repo. Each save replaces the previous snapshot instead of adding to
+git history. Close your browser before saving. Bluetooth pairings only work
+again on the same machine, because the keys are tied to the adapter.
+
 ### Commands
 
 | Command | Description |
@@ -95,6 +123,7 @@ On another machine: `git pull && ./dot install`.
 | `./dot link` | (Re)create the symlinks only |
 | `./dot adopt` | Start tracking a new path: add it to `links.txt`, then run this |
 | `./dot status` | Show linked, missing or diverged paths and pending changes |
+| `./dot vault save\|restore\|repos` | Encrypted private state (see above) |
 
 > Some applications save by replacing a file instead of writing through the
 > symlink. `./dot sync` detects this, pulls the newer file into the repository
@@ -132,8 +161,8 @@ should be reviewed on different hardware:
 ## Security
 
 This repository is public and contains **no credentials**. SSH and GPG keys,
-browser profiles, and CLI logins (GitHub, Claude, Codex) are intentionally not
-tracked. Sign in again after installing.
+browser profiles, and CLI logins (GitHub, Claude, Codex) live only in the
+encrypted private vault described above.
 
 `./dot sync` scans every tracked file for token and private-key patterns and
 fails loudly if it finds one. Files that must stay local inside a tracked

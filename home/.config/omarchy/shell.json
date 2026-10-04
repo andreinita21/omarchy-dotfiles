@@ -7,15 +7,6 @@
           "id": "omarchy.keyboard-layout"
         },
         {
-          "id": "omarchy.indicators"
-        },
-        {
-          "format": "dddd HH:mm",
-          "formatAlt": "d MMMM 'W'ww yyyy",
-          "id": "omarchy.clock",
-          "verticalFormat": "HH\n—\nmm"
-        },
-        {
           "id": "omarchy.system-update"
         }
       ],
@@ -35,7 +26,7 @@
           "id": "omarchy.tray"
         },
         {
-          "id": "kshatriya-abhay.nbfc"
+          "id": "omarchy.indicators"
         },
         {
           "id": "omarchy.bluetooth"
@@ -47,16 +38,22 @@
           "id": "omarchy.audio"
         },
         {
-          "id": "omarchy.monitor"
+          "id": "andreinita21.omamonitor"
         },
         {
           "id": "omarchy.power",
           "showPercentage": false
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "ddd d MMM HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm"
         }
       ]
     },
     "position": "top",
-    "transparent": true,
+    "transparent": false,
     "id": "andrei.bar"
   },
   "idle": {
@@ -72,15 +69,25 @@
     },
     {
       "id": "andrei.rounding-blur"
+    },
+    {
+      "id": "andrei.lock"
+    },
+    {
+      "id": "andrei.idle"
     }
   ],
   "version": 1,
   "disabledPlugins": [
     "omarchy.media",
-    "omarchy.background"
+    "omarchy.background",
+    "omarchy.lock",
+    "omarchy.idle"
   ],
   "cloneSourceRestores": [
     "custom.media",
-    "andrei.background"
+    "andrei.background",
+    "andrei.lock",
+    "andrei.idle"
   ]
 }

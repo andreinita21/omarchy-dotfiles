@@ -32,3 +32,6 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !gh auth git-credential
+[user]
+	name = andreinita21
+	email = andreisebastian.nita@gmail.com

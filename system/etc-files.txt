@@ -1,3 +1,9 @@
 # /etc files captured by ./dot sync and restored by ./dot install.
 /etc/nbfc/nbfc.json
 /etc/nbfc/configs/Lenovo ThinkPad T14 Gen5.json
+# System tuning (not disk/boot-specific; fstab, crypttab and kernel cmdline
+# are created by the Omarchy installer and must not be copied between disks)
+/etc/tmpfiles.d/thp.conf
+/etc/systemd/zram-generator.conf.d/99-local.conf
+/etc/limine-entry-tool.d/rtc-alarm.conf
+/etc/conf.d/wireless-regdom

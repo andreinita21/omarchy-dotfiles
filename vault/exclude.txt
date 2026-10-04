@@ -1,0 +1,30 @@
+# tar --exclude patterns: caches and lock files that are rebuilt on first run.
+*/Cache
+*/Code Cache
+*/GPUCache
+*/GrShaderCache
+*/GraphiteDawnCache
+*/DawnGraphiteCache
+*/DawnWebGPUCache
+*/ShaderCache
+*/Service Worker/CacheStorage
+*/Service Worker/ScriptCache
+*/component_crx_cache
+*/extensions_crx_cache
+*/Safe Browsing
+*/OptimizationHints
+*/optimization_guide_model_store
+*/OnDeviceHeadSuggestModel
+*/WasmTtsEngine
+*/ActorSafetyLists
+*/Crash Reports
+*/BrowserMetrics*
+*/Singleton*
+*/LOCK
+*/lockfile
+.codex/tmp
+.codex/.tmp
+.codex/log
+.claude/plugins/marketplaces
+# Memory dirs are symlinks into this repo (see links.txt)
+.claude/projects/*/memory

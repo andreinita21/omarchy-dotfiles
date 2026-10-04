@@ -1,0 +1,70 @@
+{
+  "devices": {
+    "MX Keys Mini": {
+      "custom": {},
+      "settings": {
+        "backlightLevel": 98,
+        "backlightMode": "Automatic",
+        "fadeHandsIn": null,
+        "fadeHandsOut": null,
+        "fadePowered": null,
+        "layout": "unchanged",
+        "topRow": "media"
+      },
+      "slots": {
+        "key.0x103": "default",
+        "key.0x108": "emoji",
+        "key.0x10a": "screenshot",
+        "key.0x117": "default",
+        "key.0x11c": "mic-mute",
+        "key.0x11d": "default",
+        "key.0xc2": "default",
+        "key.0xe0": "default",
+        "key.0xe1": "default",
+        "key.0xe2": "default",
+        "key.0xe3": "default",
+        "key.0xe5": "default",
+        "key.0xe7": "default",
+        "key.0xe8": "default",
+        "key.0xe9": "default"
+      }
+    },
+    "MX Master 3S": {
+      "custom": {},
+      "hyprDevices": [
+        "logitech-usb-receiver-mouse",
+        "mx-master-3s"
+      ],
+      "settings": {
+        "dpi": 1000,
+        "dpiPresets": [
+          800,
+          1000,
+          1600,
+          2400
+        ],
+        "hires": false,
+        "horizontalThreshold": 32,
+        "invertThumb": false,
+        "invertWheel": false,
+        "smartshift": 10,
+        "smartshiftOn": true,
+        "verticalScroll": 1
+      },
+      "slots": {
+        "gesture.down": "scratchpad",
+        "gesture.left": "workspace-prev-new",
+        "gesture.right": "workspace-next-new",
+        "gesture.tap": "omarchy-menu",
+        "gesture.up": "launcher",
+        "key.0x52": "default",
+        "key.0x53": "default",
+        "key.0x56": "default",
+        "key.0xc4": "default",
+        "thumb.left": "workspace-prev-new",
+        "thumb.right": "workspace-next-new"
+      }
+    }
+  },
+  "version": 4
+}

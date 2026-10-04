@@ -10,6 +10,8 @@
 #   ./dot adopt     Move not-yet-tracked paths from links.txt into the repo and
 #                   link them back (use after adding a line to links.txt).
 #   ./dot status    Show which tracked paths are linked, missing or diverged.
+#   ./dot vault     Encrypted private state (accounts, browser sessions,
+#                   keyring, Wi-Fi, Bluetooth): save | restore | repos.
 
 set -uo pipefail
 
@@ -174,7 +176,9 @@ cmd_sync() {
   mkdir -p "$DOT/system"
   systemctl list-unit-files --state=enabled --no-legend --type=service,socket,timer,path \
     | awk '{print $1}' | grep -v '@' | sort > "$DOT/system/services.txt"
-  ok "$(wc -l < "$DOT/system/services.txt") enabled system units"
+  systemctl --user list-unit-files --state=enabled --no-legend --type=service,socket,timer,path \
+    | awk '{print $1}' | grep -v '@' | sort > "$DOT/system/user-services.txt"
+  ok "$(wc -l < "$DOT/system/services.txt") system units, $(wc -l < "$DOT/system/user-services.txt") user units"
 
   step "Snapshotting /etc files"
   while IFS= read -r f; do
@@ -225,6 +229,199 @@ secret_scan() {
   ok "nothing found"
 }
 
+# ------------------------------------------------------------------ vault
+#
+# Private state (accounts, browser sessions, keyring, Wi-Fi, Bluetooth, agent
+# history) is packed into one tarball, encrypted with a passphrase (gpg,
+# AES256) and pushed as a single orphan commit to a separate *private* repo,
+# so old snapshots don't pile up in history. Lists live in vault/.
+
+VAULT_REMOTE="${VAULT_REMOTE:-$(cat "$DOT/vault/remote" 2>/dev/null)}"
+VAULT_CLONE="$HOME/.local/state/omarchy-vault"
+VAULT_PART=45M   # GitHub rejects files over 100MB
+# Non-interactive use: VAULT_PASSFILE=/path/to/passphrase ./dot vault ...
+GPG_PASS=()
+[[ -n ${VAULT_PASSFILE:-} ]] && GPG_PASS=(--batch --pinentry-mode loopback --passphrase-file "$VAULT_PASSFILE")
+
+BROWSERS=(chromium chrome brave firefox zen)
+
+browsers_running() {
+  local b running=()
+  for b in "${BROWSERS[@]}"; do pgrep -x "$b" >/dev/null && running+=("$b"); done
+  echo "${running[*]}"
+}
+
+# Browsers rewrite their sqlite databases constantly; copy them only while closed.
+require_browsers_closed() {
+  local running
+  running=$(browsers_running)
+  [[ -z $running ]] && return
+  warn "close these first so their databases are consistent: $running"
+  read -rp "  Close them now? [Y/n] " a
+  [[ ${a,,} == n ]] && return
+  for b in $running; do pkill -x "$b"; done
+  sleep 3
+  [[ -z $(browsers_running) ]] || { err "still running: $(browsers_running)"; exit 1; }
+}
+
+# Git repos under $HOME, so their checkouts can be re-cloned (contents are not saved).
+repo_manifest() {
+  find "$HOME" -maxdepth 4 -name .git -type d \
+    -not -path "$HOME/.*" -not -path "$DOT/*" 2>/dev/null | sort | while read -r g; do
+    local d=${g%/.git} url
+    url=$(git -C "$d" remote get-url origin 2>/dev/null) || continue
+    printf '%s %s %s\n' "${d#"$HOME"/}" "$url" "$(git -C "$d" branch --show-current)"
+  done
+}
+
+ensure_gh() {
+  gh auth status &>/dev/null && return
+  step "Log in to GitHub (needed for the private vault repo)"
+  gh auth login -h github.com -p https -w || { err "gh login failed"; exit 1; }
+}
+
+vault_save() {
+  local dest=${1:-}
+  [[ -n $VAULT_REMOTE || -n $dest ]] || { err "no vault/remote and no target directory"; exit 1; }
+  require_browsers_closed
+
+  local stage list rc
+  stage=$(mktemp -d) && chmod 700 "$stage"
+  trap 'rm -rf "$stage"; trap - RETURN' RETURN
+
+  step "Packing private files from \$HOME"
+  list="$stage/home.list"
+  while IFS= read -r rel; do
+    [[ -e $HOME/$rel || -L $HOME/$rel ]] && echo "$rel"
+  done < <(entries "$DOT/vault/include.txt") > "$list"
+  tar -C "$HOME" --zstd -cf "$stage/home.tar.zst" \
+    --exclude-from=<(entries "$DOT/vault/exclude.txt") \
+    --warning=no-file-ignored --warning=no-file-changed --ignore-failed-read -T "$list"
+  rc=$?; ((rc > 1)) && { err "tar failed ($rc)"; exit 1; }
+  ok "$(wc -l < "$list") paths, $(du -h "$stage/home.tar.zst" | cut -f1)"
+
+  step "Packing root-owned files (Wi-Fi, Bluetooth)"
+  list="$stage/system.list"
+  entries "$DOT/vault/system.txt" | while read -r p; do
+    sudo test -e "$p" && echo "${p#/}"
+  done > "$list"
+  sudo tar -C / --zstd -cf "$stage/system.tar.zst" --ignore-failed-read -T "$list"
+  sudo chown "$USER:" "$stage/system.tar.zst"
+  ok "$(tr '\n' ' ' < "$list")"
+
+  step "Recording git repos under \$HOME"
+  repo_manifest > "$stage/repos.txt"
+  ok "$(wc -l < "$stage/repos.txt") repos"
+
+  date -Is > "$stage/created"
+  hostname > "$stage/host"
+  tar -C "$stage" -cf "$stage/vault.tar" created host repos.txt home.list home.tar.zst system.tar.zst
+
+  step "Encrypting (choose a strong passphrase; you need it on every restore)"
+  gpg "${GPG_PASS[@]}" --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 \
+    --s2k-count 65011712 --no-symkey-cache -o "$stage/vault.gpg" "$stage/vault.tar" \
+    || { err "encryption failed"; exit 1; }
+  rm "$stage/vault.tar"
+
+  if [[ -n $dest ]]; then
+    mkdir -p "$dest" && rm -f "$dest"/vault.gpg.part-*
+    split -b "$VAULT_PART" -d -a 3 "$stage/vault.gpg" "$dest/vault.gpg.part-"
+    (cd "$dest" && sha256sum vault.gpg.part-* > SHA256SUMS)
+    ok "written to $dest ($(du -h "$stage/vault.gpg" | cut -f1))"
+    return
+  fi
+
+  step "Uploading to private repo $VAULT_REMOTE"
+  ensure_gh
+  if ! gh repo view "$VAULT_REMOTE" &>/dev/null; then
+    gh repo create "$VAULT_REMOTE" --private -d "Encrypted private state for omarchy-dotfiles" >/dev/null \
+      && ok "created private repo $VAULT_REMOTE" || { err "could not create $VAULT_REMOTE"; exit 1; }
+  fi
+  [[ $(gh repo view "$VAULT_REMOTE" --json visibility -q .visibility) == PRIVATE ]] \
+    || { err "$VAULT_REMOTE is not private; refusing to upload"; exit 1; }
+
+  rm -rf "$VAULT_CLONE" && mkdir -p "$VAULT_CLONE"
+  split -b "$VAULT_PART" -d -a 3 "$stage/vault.gpg" "$VAULT_CLONE/vault.gpg.part-"
+  (cd "$VAULT_CLONE" && sha256sum vault.gpg.part-* > SHA256SUMS)
+  printf '# omarchy-vault\n\nEncrypted snapshot from `%s`, %s.\nRestore with `~/dotfiles/dot vault restore`.\n' \
+    "$(cat "$stage/host")" "$(cat "$stage/created")" > "$VAULT_CLONE/README.md"
+  git -C "$VAULT_CLONE" init -q -b main
+  git -C "$VAULT_CLONE" add -A
+  git -C "$VAULT_CLONE" commit -qm "Vault snapshot $(cat "$stage/created")"
+  git -C "$VAULT_CLONE" push -qf "https://github.com/$VAULT_REMOTE.git" main \
+    && ok "pushed $(du -h "$stage/vault.gpg" | cut -f1) (history replaced, only the latest snapshot is kept)" \
+    || { err "push failed"; exit 1; }
+  rm -rf "$VAULT_CLONE"
+}
+
+vault_restore() {
+  local src=${1:-} stage
+  stage=$(mktemp -d) && chmod 700 "$stage"
+  trap 'rm -rf "$stage"; trap - RETURN' RETURN
+
+  if [[ -z $src ]]; then
+    step "Downloading vault from $VAULT_REMOTE"
+    ensure_gh
+    gh repo clone "$VAULT_REMOTE" "$stage/repo" -- -q --depth 1 || { err "clone failed"; return 1; }
+    src="$stage/repo"
+  fi
+  (cd "$src" && sha256sum -c --quiet SHA256SUMS) || { err "vault parts are corrupt"; return 1; }
+
+  step "Decrypting"
+  cat "$src"/vault.gpg.part-* | gpg "${GPG_PASS[@]}" -d --no-symkey-cache -o "$stage/vault.tar" \
+    || { err "wrong passphrase or damaged vault"; return 1; }
+  tar -C "$stage" -xf "$stage/vault.tar" && rm "$stage/vault.tar"
+  ok "snapshot from $(cat "$stage/host"), $(cat "$stage/created")"
+
+  require_browsers_closed
+
+  step "Restoring private files into \$HOME"
+  # The keyring daemon would write its in-memory copy back over the restored file.
+  pkill -x gnome-keyring-d 2>/dev/null; pkill -x gnome-keyring-daemon 2>/dev/null
+  local rel
+  while IFS= read -r rel; do
+    [[ -e $HOME/$rel && ! -L $HOME/$rel ]] && backup "$HOME/$rel"
+  done < "$stage/home.list"
+  tar -C "$HOME" --zstd -xf "$stage/home.tar.zst" && ok "home files restored"
+  cmd_link >/dev/null   # re-link tracked files that lived inside restored dirs
+
+  step "Restoring Wi-Fi networks and Bluetooth pairings"
+  sudo tar -C / --zstd -xf "$stage/system.tar.zst" --same-owner -p && ok "system files restored"
+  sudo nmcli connection reload &>/dev/null
+  sudo systemctl restart bluetooth &>/dev/null
+
+  cp "$stage/repos.txt" "$HOME/.local/state/omarchy-repos.txt"
+  local n; n=$(grep -c . "$stage/repos.txt")
+  if ((n)); then
+    read -rp "  Clone your $n git repos back to their old paths (code only, from their remotes)? [y/N] " a
+    [[ ${a,,} == y ]] && vault_clone_repos "$stage/repos.txt"
+  fi
+  warn "log out and back in (or reboot) so the keyring and browser pick up the restored data"
+}
+
+vault_clone_repos() {
+  local path url branch
+  while read -r path url branch; do
+    [[ -e $HOME/$path ]] && continue
+    git clone -q ${branch:+-b "$branch"} "$url" "$HOME/$path" && ok "$path" || warn "could not clone $path ($url)"
+  done < "${1:-$HOME/.local/state/omarchy-repos.txt}"
+}
+
+cmd_vault() {
+  case "${1:-}" in
+    save)    vault_save "${2:-}" ;;
+    restore) vault_restore "${2:-}" ;;
+    repos)   vault_clone_repos ;;
+    *) cat <<'EOF'
+./dot vault save [dir]      Encrypt private state and push it to the private vault
+                            repo (or write it to dir, e.g. a USB stick).
+./dot vault restore [dir]   Download (or read from dir), decrypt and restore it.
+./dot vault repos           Clone the recorded git repos back into $HOME.
+EOF
+       ;;
+  esac
+}
+
 # ------------------------------------------------------------------ install
 
 sudo_keepalive() {
@@ -256,6 +453,8 @@ install_system_tweaks() {
     [[ -f $DOT/system/etc/$rel ]] || continue
     sudo install -D -m644 "$DOT/system/etc/$rel" "$f" && ok "$f"
   done < <(entries "$DOT/system/etc-files.txt")
+  sudo systemd-tmpfiles --create /etc/tmpfiles.d/thp.conf &>/dev/null
+  command -v limine-update >/dev/null && sudo limine-update &>/dev/null && ok "boot entries regenerated"
 }
 
 install_packages() {
@@ -287,6 +486,12 @@ install_services() {
     systemctl is-enabled "$u" &>/dev/null && continue
     sudo systemctl enable "$u" &>/dev/null && ok "$u" || warn "could not enable $u"
   done < <(entries "$DOT/system/services.txt")
+
+  step "Enabling user services"
+  while read -r u; do
+    systemctl --user is-enabled "$u" &>/dev/null && continue
+    systemctl --user enable "$u" &>/dev/null && ok "$u" || warn "could not enable $u (installed later by a plugin?)"
+  done < <(entries "$DOT/system/user-services.txt")
 }
 
 fix_home_paths() {
@@ -388,12 +593,17 @@ cmd_install() {
   install_apps
   install_desktop_state
 
+  if [[ -n $VAULT_REMOTE ]]; then
+    step "Private vault"
+    read -rp "  Restore accounts, browser sessions, keyring, Wi-Fi and Bluetooth from $VAULT_REMOTE? [Y/n] " a
+    [[ ${a,,} == n ]] || vault_restore
+  fi
+
   step "Done. Manual steps left:"
   cat <<'EOF'
-  - Log in again:        gh auth login && gh auth setup-git ; claude ; codex
-  - SSH keys:            copy ~/.ssh from a secure backup (not in this repo)
-  - Fingerprint:         omarchy setup security fingerprint
-  - Browser:             sign into Chromium to sync bookmarks/extensions
+  - Skipped the vault?   ./dot vault restore   (accounts, sessions, keyring, Wi-Fi)
+  - Git over HTTPS:      gh auth setup-git
+  - Fingerprint:         omarchy setup security fingerprint (prints are per-sensor)
   - Monitors:            check ~/.config/hypr/monitors.lua matches this machine's outputs
   - Fan control (nbfc):  config is for a ThinkPad T14 Gen5; change it on other hardware
   - Reboot to pick up services, kernel modules and the login manager.
@@ -406,5 +616,6 @@ case "${1:-}" in
   adopt)   cmd_adopt ;;
   sync)    cmd_sync ;;
   status)  cmd_status ;;
-  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  vault)   shift; cmd_vault "$@" ;;
+  *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

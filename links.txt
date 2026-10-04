@@ -49,6 +49,8 @@
 .config/Pinta/settings.xml
 .config/Pinta/palette.txt
 .config/AirPodsTrayApp
+.config/solaar
+.config/obsidian/user-flags.conf
 .config/chromium-flags.conf
 
 # Dev tooling

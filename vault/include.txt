@@ -1,0 +1,58 @@
+# Private state packed into the encrypted vault by `./dot vault save`.
+# Paths are relative to $HOME; missing ones are skipped, so it is fine to
+# list things that only exist on some machines. Never stored in this repo.
+
+# Keyring: GitHub CLI token, Chromium cookie key, Zed GitHub login.
+# Omarchy's default keyring is unencrypted, so it moves between machines as-is.
+.local/share/keyrings
+
+# Browser: logins, cookies, open tabs, history, extensions, WhatsApp Web
+.config/chromium
+.config/BraveSoftware
+.config/google-chrome
+.mozilla
+.zen
+
+# CLI and agent accounts
+.config/gh/hosts.yml
+.claude.json
+.claude/.credentials.json
+.claude/history.jsonl
+.claude/projects
+.claude/plugins
+.claude/skills/synced
+.codex
+.hermes
+.pi/agent
+.config/hackademy-cloud
+.config/github-copilot
+.config/opencode/auth.json
+.local/share/opencode
+.gemini
+.cursor
+.grok
+
+# Keys and generic credential files
+.ssh
+.gnupg
+.password-store
+.netrc
+.git-credentials
+.npmrc
+.docker/config.json
+.aws
+.kube
+.config/rclone
+
+# App state and sessions
+.local/share/zed/db
+.local/share/zed/extensions
+.local/share/pki
+.local/share/org.localsend.localsend_app
+.local/share/zoxide
+.local/share/TelegramDesktop
+.config/obsidian
+.config/Signal
+.config/discord
+.config/spotify
+.bash_history

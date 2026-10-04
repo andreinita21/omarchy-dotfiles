@@ -4,7 +4,6 @@ bluetooth.service
 cups.path
 cups.service
 cups.socket
-docker.service
 fstrim.timer
 intel_lpmd.service
 limine-snapper-sync.service
