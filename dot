@@ -284,6 +284,7 @@ vault_save() {
   local dest=${1:-}
   [[ -n $VAULT_REMOTE || -n $dest ]] || { err "no vault/remote and no target directory"; exit 1; }
   require_browsers_closed
+  sudo true || { err "sudo is needed for Wi-Fi and Bluetooth"; exit 1; }
 
   local stage list rc
   stage=$(mktemp -d) && chmod 700 "$stage"
@@ -303,7 +304,7 @@ vault_save() {
   step "Packing root-owned files (Wi-Fi, Bluetooth)"
   list="$stage/system.list"
   entries "$DOT/vault/system.txt" | while read -r p; do
-    sudo test -e "$p" && echo "${p#/}"
+    sudo -n test -e "$p" 2>/dev/null && echo "${p#/}"
   done > "$list"
   sudo tar -C / --zstd -cf "$stage/system.tar.zst" --ignore-failed-read -T "$list"
   sudo chown "$USER:" "$stage/system.tar.zst"
