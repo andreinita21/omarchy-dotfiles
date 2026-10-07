@@ -66,9 +66,9 @@ style = "fg:ink bg:seg1"
 
 [os.symbols]
 # Omarchy sets ID=omarchy in /etc/os-release, so starship reports Linux, not Arch.
-Linux = ""
-Arch = ""
-Unknown = ""
+Linux = "󱝁"
+Arch = "󱝁"
+Unknown = "󱝁"
 
 [username]
 show_always = true

@@ -4,7 +4,7 @@
     "type": "file",
     "source": "~/.config/fastfetch/logos/art1.txt",
     "color": {
-      "1": "38;2;60;191;92"
+      "1": "38;2;232;95;175"
     },
     "padding": {
       "top": 2,

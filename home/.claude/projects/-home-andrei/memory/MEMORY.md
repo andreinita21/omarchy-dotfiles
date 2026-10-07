@@ -1,3 +1,4 @@
 - [Dotfiles repo](dotfiles-repo.md) — ~/dotfiles replicates the Omarchy setup; run ./dot sync after config changes
 - [Omarchy shell plugin dev gotchas](omarchy-shell-plugin-dev.md) — Lua config needs hyprctl eval not keyword; restart shell after plugin edits
 - [OmaOptions plugin](logi-plugin.md) — github.com/andreinita21/omaoptions; Solaar-based engine (never logiops), per-device config, HID++ traffic stutters the mouse
+- [Samsung G85SD over HDMI](samsung-g85sd-hdmi.md) — 3440x1440 needs custom modeline; omamonitor emits modelines for non-EDID modes
