@@ -1,26 +1,26 @@
 {
-  "at": 1791381655.1462588,
+  "at": 1791626098.581996,
   "devices": [
     {
-      "battery": null,
+      "battery": 80,
       "charging": false,
       "full": false,
       "kind": "mouse",
-      "lastOnline": null,
+      "lastOnline": 1791626098.5819774,
       "link": "receiver",
       "name": "MX Master 3S",
-      "online": false,
+      "online": true,
       "serial": "3997FD0C"
     },
     {
-      "battery": null,
+      "battery": 80,
       "charging": false,
       "full": false,
       "kind": "keyboard",
-      "lastOnline": null,
+      "lastOnline": 1791626098.5819921,
       "link": "receiver",
       "name": "MX Keys Mini",
-      "online": false,
+      "online": true,
       "serial": "CFCA291D"
     }
   ]

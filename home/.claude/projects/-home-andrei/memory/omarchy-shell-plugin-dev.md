@@ -70,3 +70,18 @@ works — args are evaluated as Lua. Use `hyprctl dispatch 'hl.dsp.focus({ works
 `hl.dsp.workspace.toggle_special("scratchpad")`, `hl.dsp.window.move({ workspace = "+1" })`,
 `hl.dsp.window.cycle_next()`, `hl.dsp.window.fullscreen({ mode = "fullscreen" })`,
 `hl.dsp.window.float({ action = "toggle" })`, `hl.dsp.window.close()`. Verified 2026-09-22.
+
+**Omamonitor per-app scaling (2026-10-08, v1.2.0):** lists open windows
+(hyprctl clients → /proc exe/maps → desktop entry). Browsers: flags file
+(omarchy-launch-browser uses only the first word of Exec). Others: override in
+~/.local/share/applications with `Exec=omamonitor-scale-run --scale=X --kind=K ...`
+(qt QT_SCALE_FACTOR, gtk3 GDK_DPI_SCALE, chromium flag, terminals font size).
+The Omarchy launcher runs `uwsm-app -- gtk-launch <id>.desktop`, so overrides apply.
+Measured: GTK 4 ignores GDK_DPI_SCALE/GDK_SCALE (unsupported); Chromium on Wayland
+DPR = monitor scale × flag, under XWayland the flag is absolute. ~/.local/bin is
+AFTER /usr/bin in PATH, so shadowing binaries there does not work.
+v1.3.0: foot resized live via `hl.dsp.send_key_state({mods="CTRL", key="equal", state="down"/"up", window="address:0x.."})`
+(works unfocused; foot step 0.5pt = 0.667px); other apps get a relaunch button (close windows one at a
+time — Xournal++ ignores a close while its transient 2nd window is up — never kill if a window stays;
+browsers SIGTERM + `--restore-last-session`, verified tabs return).
+Commits to omamonitor: user as sole author, no Claude lines.

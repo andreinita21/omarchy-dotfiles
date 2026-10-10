@@ -119,3 +119,7 @@ hl.unbind("switch:on:Lid Switch")
 hl.unbind("switch:off:Lid Switch")
 o.bind("switch:on:Lid Switch", nil, "andrei-lid-close", { locked = true })
 o.bind("switch:off:Lid Switch", nil, "andrei-lid-open", { locked = true })
+
+-- Discord (native app). SUPER+D had no default binding. Focuses the running
+-- window by its exact class instead of opening a second instance.
+o.bind("SUPER + D", "Discord", { launch = "discord", focus = "^discord$" })

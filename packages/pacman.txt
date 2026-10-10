@@ -21,6 +21,7 @@ cups
 cups-filters
 cups-pk-helper
 ddcutil
+discord
 docker
 docker-buildx
 docker-compose
@@ -64,6 +65,7 @@ imagemagick
 imv
 inetutils
 inotify-tools
+intellij-idea-community-edition
 intel-lpmd
 intel-ucode
 inxi
