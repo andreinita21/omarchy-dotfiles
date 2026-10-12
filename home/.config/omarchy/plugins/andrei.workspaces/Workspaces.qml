@@ -2,20 +2,46 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 
 // Per-monitor workspaces, matching ~/.config/hypr/workspaces.lua: each monitor
-// shows its own 1-5 (HDMI-A-1's 1-5 are really workspaces 6-10). Workspaces
+// shows its own 1-5 (the second screen's 1-5 are really workspaces 6-10).
+// Which block each screen owns is decided at runtime by workspaces.lua, which
+// writes it to $XDG_RUNTIME_DIR/omarchy-workspace-blocks.json. Workspaces
 // from another monitor that landed here after an unplug are shown with the
 // number SUPER+number uses to reach them from this monitor (6-0).
 BarWidget {
   id: root
   moduleName: "omarchy.workspaces"
 
-  // Keep in sync with `owners` in ~/.config/hypr/workspaces.lua.
-  readonly property var offsets: ({ "DP-3": 0, "HDMI-A-1": 5 })
+  // Monitor name -> offset of its workspace block, from workspaces.lua.
+  property var offsets: ({})
+
+  FileView {
+    id: blocksFile
+    path: Quickshell.env("XDG_RUNTIME_DIR") + "/omarchy-workspace-blocks.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: {
+      var parsed = {}
+      try { parsed = JSON.parse(text()) || {} } catch (e) { parsed = {} }
+      if (JSON.stringify(parsed) !== JSON.stringify(root.offsets)) root.offsets = parsed
+    }
+    onLoadFailed: root.offsets = ({})
+  }
+
+  // The file is replaced atomically, which a watch can miss; re-read now
+  // and then as a backstop.
+  Timer {
+    interval: 2000
+    repeat: true
+    running: true
+    onTriggered: blocksFile.reload()
+  }
   readonly property int perMonitor: 5
   readonly property int total: 10
 

@@ -10,7 +10,7 @@ metadata:
 
 The user's Samsung Odyssey G85SD ultrawide is on HDMI-A-1 of the ThinkPad T14 Gen 5. Over
 HDMI its EDID tops out at 2560x1440, so 3440x1440 is set with a custom reduced-blanking modeline
-(`modeline 542.78 3440 3488 3520 3600 1440 1443 1448 1510 +hsync -vsync`, ~99.7 Hz) in
+(`modeline 542.78 3440 3488 3520 3600 1440 1443 1448 1510 +hsync -vsync`, ~99.7 Hz; since 2026-10-12 the rule is keyed `desc:Samsung Electric Company Odyssey G85SD H1AK500000`) in
 ~/.config/hypr/monitors.lua. `3440x1440@100` as a plain mode is rejected (falls back to
 2560x1440@120); ~100 Hz is the ceiling under the 600 MHz HDMI TMDS limit. 120 Hz+ needs USB-C to DP.
 

@@ -41,6 +41,7 @@ fd
 ffmpegthumbnailer
 foot
 fprintd
+fuse2
 fwupd
 fzf
 git
@@ -70,7 +71,6 @@ intel-lpmd
 intel-ucode
 inxi
 jq
-kdenlive
 kernel-modules-hook
 lazydocker
 lazygit
@@ -95,7 +95,6 @@ man-db
 mariadb-libs
 mise-bin
 mkinitcpio
-moonlight-qt
 mpv
 mpv-mpris
 nautilus
@@ -117,7 +116,6 @@ omawrite
 omazed
 pacman-contrib
 pamixer
-pinta
 pipewire
 pipewire-alsa
 pipewire-jack
@@ -180,7 +178,6 @@ wtype
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xdg-terminal-exec
-xournalpp
 yaru-icon-theme
 yay
 yt-dlp

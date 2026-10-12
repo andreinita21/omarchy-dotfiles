@@ -85,3 +85,18 @@ v1.3.0: foot resized live via `hl.dsp.send_key_state({mods="CTRL", key="equal", 
 time — Xournal++ ignores a close while its transient 2nd window is up — never kill if a window stays;
 browsers SIGTERM + `--restore-last-session`, verified tabs return).
 Commits to omamonitor: user as sole author, no Claude lines.
+
+**Omamonitor v1.4.0 (2026-10-12):** monitors.lua keys externals by `output = "desc:<description>"`
+(eDP stays by port for clamshell scripts) and keeps rules for unplugged monitors. Hyprland 0.56.2 Lua:
+`hl.monitor` via eval can DISABLE an output but never re-enable it; only `hyprctl reload` brings it back.
+Hyprland emits no monitoradded for an output that comes up disabled, so the panel also watches
+`udevadm monitor --udev --subsystem-match=drm`. One panel copy per screen; leader = first of
+`bar.moduleWidgets("andreinita21.omamonitor")`. NEVER test hotplug with `hyprctl output create headless`
+on the user's session: invisible screens swallowed the cursor and stranded a window on workspace 11.
+**Ghost pipe bug (2026-10-12):** on unplug, Hyprland/aquamarine never commits the CRTC off, so i915 keeps the
+pipe (and big-joiner partner pipe) active for the disconnected connector (`/sys/class/drm/card1-DP-3/enabled`
+stays "enabled"; see `i915_display_info` in debugfs). A later monitor gets that pipe and every modeset
+fails ("atomic commit ... Invalid argument", monitor stuck at 0x0). Live fix: as root `echo on >
+/sys/class/drm/card1-DP-N/status`, `hyprctl eval` disable DP-N, within <0.5s `echo detect` (omamonitor
+auto-enable re-enables it otherwise). A reboot also clears it.
+**Workspaces (2026-10-12):** ~/.config/hypr/workspaces.lua hands out blocks 1-5/6-10 by monitor description at runtime (G2724D/G85SD main=1, U2412M=6, laptop gets the spare block when docked), re-assigned on monitor.added/removed; never key by port.

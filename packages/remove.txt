@@ -1,3 +1,7 @@
 aether
+kdenlive
+moonlight-qt
 obsidian
+pinta
 ufw-docker
+xournalpp

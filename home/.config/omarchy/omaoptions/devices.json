@@ -1,68 +1,6 @@
 {
-  "at": 1791620104.4599392,
+  "at": 1791833966.9525204,
   "devices": [
-    {
-      "keys": [
-        {
-          "cid": 80,
-          "divertable": false,
-          "name": "Left Button"
-        },
-        {
-          "cid": 81,
-          "divertable": false,
-          "name": "Right Button"
-        },
-        {
-          "cid": 82,
-          "divertable": true,
-          "name": "Middle Button"
-        },
-        {
-          "cid": 83,
-          "divertable": true,
-          "name": "Back Button"
-        },
-        {
-          "cid": 86,
-          "divertable": true,
-          "name": "Forward Button"
-        },
-        {
-          "cid": 195,
-          "divertable": true,
-          "name": "Mouse Gesture Button"
-        },
-        {
-          "cid": 196,
-          "divertable": true,
-          "name": "Smart Shift"
-        },
-        {
-          "cid": 215,
-          "divertable": true,
-          "name": "Virtual Gesture Button"
-        }
-      ],
-      "kind": "mouse",
-      "link": "receiver",
-      "name": "MX Master 3S",
-      "online": true,
-      "serial": "3997FD0C",
-      "settings": [
-        "change-host",
-        "divert-keys",
-        "dpi",
-        "hires-scroll-mode",
-        "hires-smooth-invert",
-        "hires-smooth-resolution",
-        "reprogrammable-keys",
-        "scroll-ratchet",
-        "smart-shift",
-        "thumb-scroll-invert",
-        "thumb-scroll-mode"
-      ]
-    },
     {
       "keys": [
         {
@@ -162,6 +100,68 @@
         "divert-keys",
         "fn-swap",
         "multiplatform"
+      ]
+    },
+    {
+      "keys": [
+        {
+          "cid": 80,
+          "divertable": false,
+          "name": "Left Button"
+        },
+        {
+          "cid": 81,
+          "divertable": false,
+          "name": "Right Button"
+        },
+        {
+          "cid": 82,
+          "divertable": true,
+          "name": "Middle Button"
+        },
+        {
+          "cid": 83,
+          "divertable": true,
+          "name": "Back Button"
+        },
+        {
+          "cid": 86,
+          "divertable": true,
+          "name": "Forward Button"
+        },
+        {
+          "cid": 195,
+          "divertable": true,
+          "name": "Mouse Gesture Button"
+        },
+        {
+          "cid": 196,
+          "divertable": true,
+          "name": "Smart Shift"
+        },
+        {
+          "cid": 215,
+          "divertable": true,
+          "name": "Virtual Gesture Button"
+        }
+      ],
+      "kind": "mouse",
+      "link": "receiver",
+      "name": "MX Master 3S",
+      "online": true,
+      "serial": "3997FD0C",
+      "settings": [
+        "change-host",
+        "divert-keys",
+        "dpi",
+        "hires-scroll-mode",
+        "hires-smooth-invert",
+        "hires-smooth-resolution",
+        "reprogrammable-keys",
+        "scroll-ratchet",
+        "smart-shift",
+        "thumb-scroll-invert",
+        "thumb-scroll-mode"
       ]
     }
   ]

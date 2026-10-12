@@ -23,13 +23,19 @@
       ],
       "right": [
         {
+          "id": "omarchy.indicators"
+        },
+        {
           "id": "kshatriya-abhay.nbfc"
         },
         {
           "id": "omarchy.tray"
         },
         {
-          "id": "omarchy.indicators"
+          "id": "andreinita21.omaoptions"
+        },
+        {
+          "id": "io.github.thisisgm.omapods"
         },
         {
           "id": "omarchy.bluetooth"
@@ -56,7 +62,7 @@
       ]
     },
     "position": "top",
-    "transparent": false,
+    "transparent": true,
     "id": "andrei.bar"
   },
   "idle": {
