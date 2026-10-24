@@ -60,6 +60,7 @@ hl.unbind("SUPER + SHIFT + P") -- was Google Photos
 hl.unbind("SUPER + SHIFT + S") -- was Google Maps
 hl.unbind("SUPER + SHIFT + D") -- was Docker TUI
 hl.unbind("SUPER + SHIFT + G") -- was Signal
+hl.unbind("SUPER + SHIFT + SLASH") -- was Passwords (1Password)
 -- Note: SUPER+SHIFT+H was never bound by Omarchy, so there is nothing to remove.
 
 -- SUPER+SHIFT+N was Omarchy's generic "Editor", which follows
@@ -76,14 +77,6 @@ o.bind("SUPER + SHIFT + N", "Neovim", { tui = "nvim" })
 o.bind("SUPER + SHIFT + S", "Screenshot", "omarchy-capture-screenshot")
 o.bind("SUPER + CTRL + SHIFT + S", "Screensaver", "andrei-launch-screensaver force")
 o.bind("SUPER + SHIFT + L", "Lock screen", "omarchy-system-lock")
-
--- omadrop:bindings:start
-hl.unbind("SUPER + SHIFT + V")
-hl.unbind("SUPER + ALT + V")
-o.bind("SUPER + SHIFT + V", "Omadrop", "/home/andrei/.local/bin/omadrop")
-o.bind("SUPER + ALT + V", "Toggle Omadrop secondary display", "/home/andrei/.local/bin/omadrop --toggle-secondary")
-o.window("projectm-ascii-live", { idle_inhibit = "always" })
--- omadrop:bindings:end
 
 -- Cursor zoom bindings I don't use.
 hl.unbind("SUPER + CTRL + Z")       -- was Zoom in
@@ -120,6 +113,9 @@ hl.unbind("switch:off:Lid Switch")
 o.bind("switch:on:Lid Switch", nil, "andrei-lid-close", { locked = true })
 o.bind("switch:off:Lid Switch", nil, "andrei-lid-open", { locked = true })
 
--- Discord (native app). SUPER+D had no default binding. Focuses the running
--- window by its exact class instead of opening a second instance.
-o.bind("SUPER + D", "Discord", { launch = "discord", focus = "^discord$" })
+-- Discord web app (the native client has no aarch64 build). SUPER+D had no
+-- default binding. The app window opens inside the running Chromium and gets
+-- the plain "Chromium" class, so match its title ("(3) Discord | Friends")
+-- instead, skipping regular browser tabs (" - Chromium" suffix).
+o.bind("SUPER + D", "Discord",
+  "omarchy-launch-or-focus-webapp 'Discord(?= \\||$)(?!.* - Chromium$)' 'https://discord.com/app'")

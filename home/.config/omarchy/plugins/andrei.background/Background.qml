@@ -2,34 +2,56 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
-import QtQuick.Effects
-import QtQuick.Shapes
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 Item {
   id: root
 
+  property var shell: null
+  property bool suspended: false
   readonly property string home: Quickshell.env("HOME")
   readonly property string stateHome: home + "/.local/state"
   readonly property string currentBackgroundLink: stateHome + "/omarchy/current/background"
+  readonly property string currentThemeBackgrounds: stateHome + "/omarchy/current/theme/backgrounds"
 
   property string currentBackground: ""
   property string displayedBackground: ""
   property string incomingBackground: ""
   property string oldBackground: ""
+  // A theme switch names its next background before it has staged the rest of
+  // the theme, so the incoming frame can decode while that work runs. A large
+  // WebP takes ~130ms to decode at any sourceSize, which the reveal would
+  // otherwise wait out after the transition arrives.
+  property string preparedBackground: ""
+  // The prepare and transition calls travel as separate IPC clients, so a
+  // prepare can land after its transition. The path it names then must not be
+  // decoded again.
+  property string lastTransitionPath: ""
+  // Native pixel size per wallpaper path, read from the file header before
+  // the image loads. Decoding at screen size only saves memory for wallpapers
+  // at least as large as the screen: with PreserveAspectCrop Qt scales the
+  // decode up to cover sourceSize, so a smaller wallpaper would cost the
+  // screen's worth of pixels instead of its own.
+  property var nativeSizes: ({})
+  property var sizeQueue: []
   property bool finishingTransition: false
   property int backgroundVersion: 0
+  property int reloadVersion: 0
   property int revealStartedVersion: -1
   property int pendingThemeVersion: -1
   property string pendingColorsRaw: ""
   property string pendingShellRaw: ""
   property real revealProgress: 1
-  // Per-transition sync across monitors: the reveal starts only once every
-  // screen has decoded the incoming image, and the transition is torn down
-  // only once every screen's base image has reloaded.
-  property int readyPanels: 0
-  property int settledPanels: 0
+  readonly property bool ready: {
+    if (isVideo(displayedBackground)) return true
+    if (backgrounds.instances.length === 0) return false
+    for (var panel of backgrounds.instances) {
+      if (!panel.backgroundReady) return false
+    }
+    return true
+  }
 
   // ------------------------------------------------------------ transitions
   //
@@ -38,7 +60,6 @@ Item {
   // lives in ~/.local/state/omarchy/transition-{theme,background}, outside any
   // theme, so it holds for every theme.
   readonly property var effects: ["fade", "blinds", "wipe", "circle", "clock", "slide", "zoom", "tiles", "bars"]
-  readonly property var maskEffects: ["blinds", "wipe", "circle", "clock", "tiles", "bars"]
   readonly property var effectDurations: ({
     fade: 600, blinds: 700, wipe: 520, circle: 650, clock: 750,
     slide: 650, zoom: 650, tiles: 900, bars: 800
@@ -47,7 +68,7 @@ Item {
   property string backgroundEffect: "blinds"
   property string activeEffect: "blinds"
   property real transitionSeed: 0
-  readonly property bool maskEffect: maskEffects.indexOf(activeEffect) !== -1
+  readonly property int effectId: Math.max(0, effects.indexOf(activeEffect))
 
   function resolveEffect(kind) {
     var chosen = kind === "theme" ? themeEffect : backgroundEffect
@@ -63,6 +84,10 @@ Item {
     else if (kind === "background") backgroundEffect = effect
   }
 
+  function isVideo(path) {
+    return Util.isVideoPath(path)
+  }
+
   function imageUrl(path) {
     return Util.fileUrl(path)
   }
@@ -71,8 +96,47 @@ Item {
     if (!readlinkProc.running) readlinkProc.running = true
   }
 
+  // The desktop must never be left without a wallpaper. A path that stops
+  // loading, say one that ran through a theme since replaced, is resolved
+  // again from the background link, which a theme switch always repoints.
+  // Only a different path is taken, so a file that is there but unreadable
+  // cannot loop. Resolving runs out of process, so a background chosen in the
+  // meantime wins over what it finds; if that one fails too, it is resolved
+  // in turn once the running lookup is done.
+  property string failedBackground: ""
+  property int recoverVersion: -1
+
+  function recoverBackground(failedPath) {
+    if (!failedPath || failedPath !== displayedBackground) return
+    // A theme switch deletes the outgoing wallpaper while the transition
+    // away from it is still running; the Hyprland reload it triggers then
+    // makes the hidden desktop image reload that path and fail. The
+    // transition already replaces it, so recovering would only cut it short.
+    if (incomingBackground) return
+    failedBackground = failedPath
+    if (recoverProc.running) return
+    recoverVersion = backgroundVersion
+    recoverProc.running = true
+  }
+
+  function finishRecovery(path) {
+    path = String(path || "").trim()
+    var failedPath = failedBackground
+    failedBackground = ""
+    if (recoverVersion !== backgroundVersion) {
+      recoverBackground(failedPath)
+      return
+    }
+    if (!path || path === failedPath) return
+    setBackground(path, true)
+  }
+
   function setBackground(path, instant) {
-    transitionBackground("", path, path, instant, false, "background")
+    // Settling on the wallpaper a running transition is already heading to
+    // would only cut it short.
+    if (incomingBackground && String(path || "").trim() === currentBackground) return
+    if (instant) reloadVersion += 1
+    transitionBackground("", path, path, instant, instant, "background")
   }
 
   function transitionBackground(fromPath, path, finalPath, instant, force, kind) {
@@ -80,16 +144,20 @@ Item {
     finalPath = String(finalPath || path).trim()
     fromPath = String(fromPath || "").trim()
     if (!path || (!force && finalPath === currentBackground)) return
+    if (path !== preparedBackground) preparedBackground = ""
+    preparedBackgroundTimer.stop()
+    lastTransitionPath = path
+    // The incoming frame gates the reveal, so its size is read first.
+    requestNativeSize(path)
+    requestNativeSize(fromPath || displayedBackground)
+    requestNativeSize(finalPath)
     currentBackground = finalPath
     backgroundVersion += 1
+    failedBackground = ""
     revealStartedVersion = -1
 
     revealAnimation.stop()
-    startRevealFallback.stop()
-    settleFallback.stop()
     finishingTransition = false
-    readyPanels = 0
-    settledPanels = 0
 
     if (!instant) {
       activeEffect = resolveEffect(kind)
@@ -97,10 +165,13 @@ Item {
     }
     transitionSeed = Math.random() * 1000
 
-    if (instant || !displayedBackground) {
+    // Video frames are not fed through the image-only reveal stack. Switching
+    // instantly also avoids decoding two full videos during a transition.
+    if (instant || !displayedBackground || isVideo(path) || isVideo(displayedBackground)) {
       oldBackground = ""
       incomingBackground = ""
-      displayedBackground = path
+      preparedBackground = ""
+      displayedBackground = finalPath
       revealProgress = 1
       return
     }
@@ -122,10 +193,10 @@ Item {
     // pending; the latest theme payload should still apply.
     if (pendingThemeVersion < 0) return
     pendingThemeFallbackTimer.stop()
-    Color.loadColors(pendingColorsRaw)
-    // Color.loadShell also refreshes Style so the type scale flips with the
+    Commons.Color.loadColors(pendingColorsRaw)
+    // Commons.Color.loadShell also refreshes Style so the type scale flips with the
     // background reveal instead of waiting for a separate reload path.
-    Color.loadShell(pendingShellRaw)
+    Commons.Color.loadShell(pendingShellRaw)
     Style.scheduleRefresh()
     pendingThemeVersion = -1
     pendingColorsRaw = ""
@@ -138,33 +209,45 @@ Item {
     if (!incomingBackground || revealProgress >= 1) applyPendingTheme()
   }
 
-  function panelReady() {
-    readyPanels += 1
-    if (readyPanels >= Quickshell.screens.length) startReveal()
-    else if (!startRevealFallback.running) startRevealFallback.restart()
-  }
-
-  function startReveal() {
-    startRevealFallback.stop()
+  function startReveal(panel) {
     if (!incomingBackground) return
+    panel.maskReady = true
     if (revealStartedVersion === backgroundVersion) return
     revealStartedVersion = backgroundVersion
-    applyPendingTheme()
     revealAnimation.restart()
   }
 
-  function panelSettled() {
-    settledPanels += 1
-    if (settledPanels >= Quickshell.screens.length) finishTransition()
-    else if (!settleFallback.running) settleFallback.restart()
+  function prepareBackground(path) {
+    path = String(path || "").trim()
+    // Only a still that is not already on screen is worth decoding ahead.
+    if (!path || isVideo(path) || path === lastTransitionPath || path === displayedBackground) return
+    requestNativeSize(path)
+    preparedBackground = path
+    preparedBackgroundTimer.restart()
   }
 
-  function finishTransition() {
-    settleFallback.stop()
-    if (!finishingTransition) return
-    incomingBackground = ""
-    oldBackground = ""
-    finishingTransition = false
+  function requestNativeSize(path) {
+    if (!path || isVideo(path) || nativeSizes[path] !== undefined || sizeQueue.indexOf(path) !== -1) return
+    sizeQueue = sizeQueue.concat([path])
+    probeNextSize()
+  }
+
+  function probeNextSize() {
+    if (sizeProbe.running || sizeQueue.length === 0) return
+    sizeProbe.path = sizeQueue[0]
+    sizeProbe.command = ["magick", "identify", "-ping", "-format", "%w %h", sizeProbe.path]
+    sizeProbe.running = true
+  }
+
+  // Each theme switch names fresh snapshot paths, so keep only the sizes of
+  // the wallpapers still in play.
+  function pruneNativeSizes() {
+    var kept = {}
+    var paths = [displayedBackground, incomingBackground, oldBackground, preparedBackground]
+    for (var i = 0; i < paths.length; i++) {
+      if (paths[i] && nativeSizes[paths[i]] !== undefined) kept[paths[i]] = nativeSizes[paths[i]]
+    }
+    nativeSizes = kept
   }
 
   function openSelector() {
@@ -188,6 +271,23 @@ Item {
   }
 
   Process {
+    id: sizeProbe
+    property string path: ""
+    stdout: StdioCollector { id: sizeProbeOut }
+    onExited: function(exitCode) {
+      var parts = String(sizeProbeOut.text || "").trim().split(/\s+/)
+      var width = exitCode === 0 ? parseInt(parts[0], 10) : 0
+      var height = exitCode === 0 ? parseInt(parts[1], 10) : 0
+      var known = Object.assign({}, root.nativeSizes)
+      // An unreadable header records 0x0, which decodes at screen size.
+      known[path] = { width: width > 0 ? width : 0, height: height > 0 ? height : 0 }
+      root.nativeSizes = known
+      root.sizeQueue = root.sizeQueue.filter(function(queued) { return queued !== sizeProbe.path })
+      root.probeNextSize()
+    }
+  }
+
+  Process {
     id: readlinkProc
     command: ["readlink", "-f", root.currentBackgroundLink]
     stdout: StdioCollector {
@@ -195,7 +295,22 @@ Item {
     }
   }
 
-  IpcHandler {
+  // The link's target when it exists, or else the theme's first background,
+  // so a link left dangling still finds a wallpaper.
+  Process {
+    id: recoverProc
+    command: [
+      "bash", "-c",
+      'target=$(readlink -f "$1"); if [[ -e $target ]]; then echo "$target"; else ' +
+      'find "$2" -maxdepth 1 -type f \\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \\) | sort | head -n 1; fi',
+      "resolve", root.currentBackgroundLink, root.currentThemeBackgrounds
+    ]
+    stdout: StdioCollector {
+      onStreamFinished: root.finishRecovery(text)
+    }
+  }
+
+  ShellIpc {
     target: "background"
 
     function refresh(): void {
@@ -210,6 +325,10 @@ Item {
       root.setBackground(path, true)
     }
 
+    function setSuspended(value: string): void {
+      root.suspended = value === "true"
+    }
+
     function transition(fromPath: string, path: string): void {
       root.transitionBackground(fromPath, path, path, false, false, "background")
     }
@@ -221,6 +340,19 @@ Item {
     function themeTransition(fromPath: string, path: string, finalPath: string, colorsB64: string, shellB64: string): void {
       root.transitionBackgroundWithTheme(fromPath, path, finalPath, colorsB64, shellB64)
     }
+
+    function prepare(path: string): void {
+      root.prepareBackground(path)
+    }
+  }
+
+  // A prepared frame that no transition claims, say from a theme switch that
+  // failed after naming it, must not hold its decoded texture indefinitely.
+  Timer {
+    id: preparedBackgroundTimer
+    interval: 5000
+    repeat: false
+    onTriggered: root.preparedBackground = ""
   }
 
   Timer {
@@ -230,38 +362,42 @@ Item {
     onTriggered: root.applyPendingTheme()
   }
 
-  // Don't let one slow screen stall the others forever.
-  Timer {
-    id: startRevealFallback
-    interval: 1500
-    repeat: false
-    onTriggered: root.startReveal()
-  }
-
-  Timer {
-    id: settleFallback
-    interval: 1500
-    repeat: false
-    onTriggered: root.finishTransition()
-  }
-
-  NumberAnimation {
+  // The reveal follows the wall clock rather than Qt's animation driver,
+  // which steps one refresh interval (5.7 ms at 175 Hz) per rendered frame:
+  // any frame the GPU drops would otherwise slow the effect down and make it
+  // stutter instead of keeping its pace.
+  FrameAnimation {
     id: revealAnimation
-    target: root
-    property: "revealProgress"
-    from: 0
-    to: 1
-    duration: root.effectDurations[root.activeEffect] || 700
-    easing.type: root.activeEffect === "slide" || root.activeEffect === "zoom" ? Easing.OutCubic
-      : root.activeEffect === "tiles" ? Easing.Linear : Easing.InOutQuad
-    onFinished: {
+    property real startedAt: 0
+    readonly property real duration: Math.max(1, Style.duration(root.effectDurations[root.activeEffect] || 700))
+
+    function restart() {
+      startedAt = 0
+      root.revealProgress = 0
+      running = true
+    }
+
+    function ease(t) {
+      if (root.activeEffect === "tiles") return t
+      if (root.activeEffect === "slide" || root.activeEffect === "zoom") return 1 - Math.pow(1 - t, 3)
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+    }
+
+    onTriggered: {
+      var now = Date.now()
+      // Time starts at the first frame drawn, not when the call was made.
+      if (startedAt === 0) startedAt = now
+      var t = Math.min(1, (now - startedAt) / duration)
+      root.revealProgress = ease(t)
+      if (t < 1) return
+      stop()
       if (root.incomingBackground) {
         root.displayedBackground = root.currentBackground || root.incomingBackground
         root.finishingTransition = true
       }
-      root.revealProgress = 1
     }
   }
+
 
   Process {
     id: transitionProbe
@@ -278,6 +414,7 @@ Item {
   Component.onCompleted: refreshBackground()
 
   Variants {
+    id: backgrounds
     model: Quickshell.screens
 
     PanelWindow {
@@ -285,7 +422,24 @@ Item {
       required property var modelData
 
       screen: modelData
-      visible: !remapGuard.remapping
+      visible: !(remapGuard.remapping && screenMoved) && !root.suspended
+
+      // Omarchy's guard pulses a remap whenever the screen's origin changes,
+      // and every Hyprland reload (a theme switch does two) nudges it and
+      // puts it back. Remapping then tears the surface down mid-transition,
+      // so it is only done when the screen really ended up somewhere else.
+      property int mappedX: 0
+      property int mappedY: 0
+      readonly property bool screenMoved: !!screen && (screen.x !== mappedX || screen.y !== mappedY)
+
+      Connections {
+        target: remapGuard
+        function onRemappingChanged() {
+          if (remapGuard.remapping || !panel.screen) return
+          panel.mappedX = panel.screen.x
+          panel.mappedY = panel.screen.y
+        }
+      }
       anchors { top: true; bottom: true; left: true; right: true }
 
       ScreenMoveRemap {
@@ -295,320 +449,198 @@ Item {
       color: "transparent"
       // Keep render updates enabled. The background layer has been observed to
       // lose its committed buffer while parked with updatesEnabled=false,
-      // leaving a black desktop until omarchy-shell is restarted. The wallpaper
-      // itself is static, so this favors correctness over a small render-loop
-      // optimization.
+      // leaving a black desktop until omarchy-shell is restarted. A still
+      // wallpaper costs nothing to keep enabled. OWE manages video layers.
       updatesEnabled: true
 
       property bool maskReady: false
-      property bool settled: false
+      property int readyFrames: 0
+      readonly property bool backgroundReady: base.ready && readyFrames >= 2
+      readonly property bool framesReady: root.incomingBackground !== ""
+        && incomingFrame.status === Image.Ready && oldFrame.status === Image.Ready
+      property int warmFrames: 0
+
+      FrameAnimation {
+        running: base.ready && panel.readyFrames < 2
+        onTriggered: panel.readyFrames += 1
+      }
+
+      // The overlay lifts only once the desktop has painted the new wallpaper
+      // underneath it, so the last frame of a transition never flashes.
+      onBackgroundReadyChanged: {
+        if (backgroundReady && root.finishingTransition) {
+          root.incomingBackground = ""
+          root.oldBackground = ""
+          root.preparedBackground = ""
+          root.finishingTransition = false
+          root.pruneNativeSizes()
+        }
+      }
+
+      // Both wallpapers are drawn at progress 0 for a few frames before the
+      // animation starts, so their textures are uploaded (and a theme's
+      // colours applied) before the first moving frame instead of during it.
+      FrameAnimation {
+        running: panel.maskReady && root.revealProgress === 0 && root.revealStartedVersion !== root.backgroundVersion
+        onTriggered: {
+          panel.warmFrames += 1
+          if (panel.warmFrames >= 3) root.startReveal(panel)
+        }
+      }
+
+      // Decode the wallpaper at the size this screen can show, not the size
+      // it was shipped at. With PreserveAspectCrop Qt takes sourceSize as the
+      // area to cover, so this is the smallest decode that still fills the
+      // screen. Stock wallpapers go up to 10456x3455 (144 MB as RGBA); a
+      // 1080p laptop paid all of that for the 8 MB it can display, and paid
+      // it up to three times over during a transition. The images wait for
+      // the window's size and the wallpaper's native size so nothing is ever
+      // decoded at native size first, and a wallpaper smaller than the screen
+      // is decoded at its own size rather than scaled up to cover the screen.
+      readonly property bool sized: width > 0 && height > 0
+      readonly property int liveDecodeWidth: sized ? Math.ceil(width * screen.devicePixelRatio) : 0
+      readonly property int liveDecodeHeight: sized ? Math.ceil(height * screen.devicePixelRatio) : 0
+      // A surface being remapped briefly reports no size, and its scale can
+      // change on the way back. Following that would drop every decoded
+      // wallpaper and decode them again, leaving the desktop black meanwhile,
+      // so the size only moves to a real new one, and not mid-transition.
+      property int decodeWidth: 0
+      property int decodeHeight: 0
+
+      function updateDecodeSize() {
+        if (liveDecodeWidth <= 0 || liveDecodeHeight <= 0) return
+        if (root.incomingBackground && decodeWidth > 0) return
+        decodeWidth = liveDecodeWidth
+        decodeHeight = liveDecodeHeight
+      }
+
+      onLiveDecodeWidthChanged: updateDecodeSize()
+      onLiveDecodeHeightChanged: updateDecodeSize()
+      Component.onCompleted: {
+        updateDecodeSize()
+        if (screen) {
+          mappedX = screen.x
+          mappedY = screen.y
+        }
+      }
+
+      function decodeSize(path) {
+        if (decodeWidth <= 0 || !path) return Qt.size(0, 0)
+        var native = root.nativeSizes[path]
+        if (native === undefined) return Qt.size(0, 0)
+        if (native.width > 0 && (native.width < decodeWidth || native.height < decodeHeight)) return Qt.size(native.width, native.height)
+        return Qt.size(decodeWidth, decodeHeight)
+      }
 
       function maybeStartReveal() {
-        if (!root.incomingBackground || maskReady) return
-        if (incomingFrame.status !== Image.Ready) return
-        Qt.callLater(function() {
-          if (!root.incomingBackground || maskReady) return
-          if (incomingFrame.status !== Image.Ready) return
-          // Even if another screen already started the reveal, join it with
-          // the mask instead of staying hidden until the animation ends.
-          maskReady = true
-          root.panelReady()
-        })
+        if (!framesReady || root.revealProgress !== 0 || maskReady) return
+        warmFrames = 0
+        maskReady = true
+        root.applyPendingTheme()
       }
 
-      function maybeSettle() {
-        if (!root.finishingTransition || settled) return
-        if (base.status !== Image.Ready || base.source != root.imageUrl(root.displayedBackground)) return
-        settled = true
-        root.panelSettled()
-      }
+      onFramesReadyChanged: maybeStartReveal()
 
       WlrLayershell.namespace: "omarchy-background"
       WlrLayershell.layer: WlrLayer.Background
       WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
       exclusionMode: ExclusionMode.Ignore
 
-      Image {
+      // OWE owns video backgrounds. This layer draws stills, and stays empty
+      // behind a video so OWE's own layer shows through.
+      BackgroundMedia {
         id: base
         anchors.fill: parent
-        source: root.imageUrl(root.displayedBackground)
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: true
-        onStatusChanged: {
-          panel.maybeSettle()
-        }
+        path: root.displayedBackground
+        version: root.reloadVersion
+        // Hidden under a running transition, which already covers the
+        // screen: drawing both would cost a second full-screen pass a frame.
+        visible: !transitionEffect.visible || root.revealProgress === 0
+        cached: true
+        constrainDecode: true
+        decodeSize: panel.decodeSize(root.displayedBackground)
+        onFailedChanged: if (failed) root.recoverBackground(path)
+        onReadyChanged: panel.readyFrames = 0
+      }
+
+      // The outgoing wallpaper shares the desktop's cached decode when it is
+      // the one on screen, so starting a transition decodes only the new one.
+      // The choice is fixed when the transition starts: the desktop moves on
+      // to the new wallpaper as the reveal ends, and following it would reload
+      // this frame while the overlay is still showing it.
+      property url oldSource: ""
+      property bool oldShared: false
+
+      function pickOldSource() {
+        oldShared = root.oldBackground !== "" && root.oldBackground === root.displayedBackground
+        oldSource = !root.oldBackground ? "" : oldShared ? base.imageUrl : root.imageUrl(root.oldBackground)
       }
 
       Image {
         id: oldFrame
-        anchors.fill: parent
-        source: root.imageUrl(root.oldBackground)
-        fillMode: Image.PreserveAspectCrop
+        readonly property size decode: panel.decodeSize(root.oldBackground)
+        source: decode.width <= 0 ? "" : panel.oldSource
+        sourceSize.width: decode.width
+        sourceSize.height: decode.height
         asynchronous: true
-        cache: false
-        smooth: true
-        mipmap: true
-        visible: root.oldBackground !== "" && root.revealProgress < 1
-        transform: Translate {
-          x: root.activeEffect === "slide" ? -panel.width * 0.35 * root.revealProgress : 0
-        }
+        cache: panel.oldShared
+        visible: false
         onStatusChanged: panel.maybeStartReveal()
       }
 
-      Item {
-        id: incomingLayer
-        anchors.fill: parent
-        visible: root.incomingBackground !== "" && incomingFrame.status === Image.Ready && (root.revealProgress >= 1 || panel.maskReady)
-        layer.enabled: root.maskEffect && root.incomingBackground !== "" && root.revealProgress < 1
-        layer.smooth: true
-        opacity: root.activeEffect === "fade" || root.activeEffect === "zoom" ? root.revealProgress : 1
-        transform: [
-          Scale {
-            origin.x: incomingLayer.width / 2
-            origin.y: incomingLayer.height / 2
-            xScale: root.activeEffect === "zoom" ? 1.12 - 0.12 * root.revealProgress : 1
-            yScale: xScale
-          },
-          Translate {
-            x: root.activeEffect === "slide" ? incomingLayer.width * (1 - root.revealProgress) : 0
-          }
-        ]
-        layer.effect: MultiEffect {
-          maskEnabled: true
-          maskSource: revealMask
-          maskThresholdMin: 0.5
-          maskSpreadAtMin: 0.02
-        }
-
-        Image {
-          id: incomingFrame
-          anchors.fill: parent
-          source: root.imageUrl(root.incomingBackground)
-          fillMode: Image.PreserveAspectCrop
-          asynchronous: true
-          cache: false
-          smooth: true
-          mipmap: true
-          onStatusChanged: panel.maybeStartReveal()
-        }
+      Image {
+        id: incomingFrame
+        // The same URL and size as a prepared frame keeps its decoded
+        // image, so a transition to it can reveal at once.
+        readonly property string framePath: root.incomingBackground || root.preparedBackground
+        readonly property size decode: panel.decodeSize(framePath)
+        source: decode.width > 0 ? root.imageUrl(framePath) : ""
+        sourceSize.width: decode.width
+        sourceSize.height: decode.height
+        asynchronous: true
+        cache: false
+        visible: false
+        onStatusChanged: panel.maybeStartReveal()
       }
 
-      Item {
-        id: revealMask
+      ShaderEffect {
+        id: transitionEffect
         anchors.fill: parent
-        visible: false
-        layer.enabled: true
+        visible: panel.framesReady && (panel.maskReady || root.revealProgress > 0)
 
-        readonly property real p: root.revealProgress
-        readonly property real diagonal: Math.sqrt(width * width + height * height)
-
-        function clamp01(v) { return Math.max(0, Math.min(1, v)) }
-        // Same seed on every screen, so the pattern matches across monitors.
-        function hash(i) {
-          var v = Math.sin(i * 12.9898 + root.transitionSeed * 78.233) * 43758.5453
-          return v - Math.floor(v)
+        function cropScale(image) {
+          var textureAspect = image.implicitWidth / Math.max(1, image.implicitHeight)
+          var itemAspect = width / Math.max(1, height)
+          if (!(textureAspect > 0)) return Qt.point(1, 1)
+          return textureAspect > itemAspect ? Qt.point(itemAspect / textureAspect, 1) : Qt.point(1, textureAspect / itemAspect)
         }
 
-        Loader {
-          anchors.fill: parent
-          active: root.maskEffect
-          sourceComponent: {
-            switch (root.activeEffect) {
-            case "wipe": return wipeMask
-            case "circle": return circleMask
-            case "clock": return clockMask
-            case "tiles": return tilesMask
-            case "bars": return barsMask
-            default: return blindsMask
-            }
-          }
-        }
+        property variant fromTex: oldFrame
+        property variant toTex: incomingFrame
+        property real progress: root.revealProgress
+        property real effect: root.effectId
+        property real seed: root.transitionSeed
+        property point res: Qt.point(width * panel.screen.devicePixelRatio, height * panel.screen.devicePixelRatio)
+        property point fromScale: cropScale(oldFrame)
+        property point toScale: cropScale(incomingFrame)
 
-        // Diagonal blinds: slanted slats that each widen from their own centre
-        // line until they meet and the new background is fully revealed.
-        Component {
-          id: blindsMask
-
-          Item {
-            id: blinds
-            readonly property real slant: -0.18
-            readonly property int visibleBars: 6
-            readonly property real slice: revealMask.width / visibleBars
-            // Because every slat leans by the same amount, the screen corners fall
-            // outside the on-screen slats; extend the run past both edges by the
-            // lean so no strip of the old background survives the reveal.
-            readonly property real lean: Math.abs(slant) * revealMask.height / 2
-            readonly property int bars: Math.ceil((revealMask.width + 2 * lean) / slice)
-            // Half-width at full progress must exceed half a slice, or hairline
-            // seams show between neighbouring slats.
-            readonly property real spread: (slice / 2 + 2) * revealMask.p
-
-            Repeater {
-              model: blinds.bars
-
-              Shape {
-                id: slat
-                required property int index
-
-                readonly property real center: -blinds.lean + (index + 0.5) * blinds.slice
-                readonly property real centerTop: center - blinds.slant * revealMask.height / 2
-                readonly property real centerBottom: center + blinds.slant * revealMask.height / 2
-
-                anchors.fill: parent
-                antialiasing: true
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                  fillColor: "white"
-                  strokeColor: "transparent"
-                  startX: slat.centerTop - blinds.spread; startY: 0
-                  PathLine { x: slat.centerTop + blinds.spread; y: 0 }
-                  PathLine { x: slat.centerBottom + blinds.spread; y: revealMask.height }
-                  PathLine { x: slat.centerBottom - blinds.spread; y: revealMask.height }
-                  PathLine { x: slat.centerTop - blinds.spread; y: 0 }
-                }
-              }
-            }
-          }
-        }
-
-        // Omarchy's stock effect: one slanted band opening from the centre.
-        Component {
-          id: wipeMask
-
-          Shape {
-            id: wipe
-            readonly property real slant: -0.18
-            readonly property real centerTop: revealMask.width / 2 - slant * revealMask.height / 2
-            readonly property real centerBottom: revealMask.width / 2 + slant * revealMask.height / 2
-            readonly property real reach: revealMask.width / 2 + Math.abs(slant) * revealMask.height / 2 + 4
-            readonly property real spread: reach * revealMask.p
-
-            antialiasing: true
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-              fillColor: "white"
-              strokeColor: "transparent"
-              startX: wipe.centerTop - wipe.spread; startY: 0
-              PathLine { x: wipe.centerTop + wipe.spread; y: 0 }
-              PathLine { x: wipe.centerBottom + wipe.spread; y: revealMask.height }
-              PathLine { x: wipe.centerBottom - wipe.spread; y: revealMask.height }
-              PathLine { x: wipe.centerTop - wipe.spread; y: 0 }
-            }
-          }
-        }
-
-        // Iris: a circle growing from the centre of the screen.
-        Component {
-          id: circleMask
-
-          Item {
-            Rectangle {
-              anchors.centerIn: parent
-              width: (revealMask.diagonal + 8) * revealMask.p
-              height: width
-              radius: width / 2
-              color: "white"
-              antialiasing: true
-            }
-          }
-        }
-
-        // Clock: a radial sweep round the centre, starting at twelve o'clock.
-        Component {
-          id: clockMask
-
-          Shape {
-            id: clock
-            readonly property real cx: revealMask.width / 2
-            readonly property real cy: revealMask.height / 2
-            readonly property real radius: revealMask.diagonal / 2 + 4
-
-            antialiasing: true
-            preferredRendererType: Shape.CurveRenderer
-            ShapePath {
-              fillColor: "white"
-              strokeColor: "transparent"
-              startX: clock.cx; startY: clock.cy
-              PathAngleArc {
-                centerX: clock.cx; centerY: clock.cy
-                radiusX: clock.radius; radiusY: clock.radius
-                startAngle: -90
-                sweepAngle: 360 * revealMask.p
-                moveToStart: false
-              }
-              PathLine { x: clock.cx; y: clock.cy }
-            }
-          }
-        }
-
-        // Tiles: a grid of squares popping in at random.
-        Component {
-          id: tilesMask
-
-          Item {
-            id: tiles
-            readonly property int cols: 16
-            readonly property real size: revealMask.width / cols
-            readonly property int rows: Math.ceil(revealMask.height / size)
-
-            Repeater {
-              model: tiles.cols * tiles.rows
-
-              Rectangle {
-                required property int index
-                readonly property real delay: revealMask.hash(index) * 0.6
-
-                x: (index % tiles.cols) * tiles.size
-                y: Math.floor(index / tiles.cols) * tiles.size
-                // One pixel of overlap hides seams between neighbours.
-                width: tiles.size + 1
-                height: tiles.size + 1
-                color: "white"
-                scale: revealMask.clamp01((revealMask.p - delay) / 0.4)
-              }
-            }
-          }
-        }
-
-        // Bars: vertical strips dropping in left to right, alternating
-        // between falling from the top and rising from the bottom.
-        Component {
-          id: barsMask
-
-          Item {
-            id: strips
-            readonly property int count: 12
-            readonly property real barWidth: revealMask.width / count
-
-            Repeater {
-              model: strips.count
-
-              Rectangle {
-                required property int index
-                readonly property real delay: index / strips.count * 0.5
-
-                x: index * strips.barWidth
-                width: strips.barWidth + 1
-                height: revealMask.height * revealMask.clamp01((revealMask.p - delay) / 0.5)
-                y: index % 2 === 0 ? 0 : revealMask.height - height
-                color: "white"
-              }
-            }
-          }
-        }
+        fragmentShader: Qt.resolvedUrl("transition.frag.qsb")
       }
 
       Connections {
         target: root
+        function onOldBackgroundChanged() {
+          panel.pickOldSource()
+        }
         function onIncomingBackgroundChanged() {
+          panel.updateDecodeSize()
           panel.maskReady = false
           panel.maybeStartReveal()
         }
+        // A cache hit leaves base.ready true across the swap, so count the
+        // frames again from here before lifting the overlay.
         function onFinishingTransitionChanged() {
-          panel.settled = false
-          // The base may already hold the new image (cache hit, no status change).
-          Qt.callLater(panel.maybeSettle)
+          if (root.finishingTransition) panel.readyFrames = 0
         }
       }
 

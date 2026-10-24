@@ -46,6 +46,9 @@ Item {
   property int rounding: 8
   property bool blurEnabled: true
   property int blurPercent: 50
+  // Window opacity in percent. Blur only shows through transparent pixels,
+  // and Omarchy's own window rule leaves windows 98.5% opaque.
+  property int opacityPercent: 100
 
   function clampInt(value, min, max, fallback) {
     var n = Math.round(Number(value))
@@ -63,9 +66,9 @@ Item {
 
   // -------------------------------------------------------------- presets
   readonly property var presets: ({
-    "default": { rounding: 8, blurPercent: 40 },
-    "minimum": { rounding: 2, blurPercent: 10 },
-    "medium": { rounding: 14, blurPercent: 70 }
+    "default": { rounding: 8, blurPercent: 40, opacityPercent: 92 },
+    "minimum": { rounding: 2, blurPercent: 10, opacityPercent: 100 },
+    "medium": { rounding: 14, blurPercent: 70, opacityPercent: 85 }
   })
   property string activePreset: "default"
 
@@ -73,7 +76,7 @@ Item {
     if (!root.blurEnabled) return "custom"
     for (var name in root.presets) {
       var p = root.presets[name]
-      if (root.rounding === p.rounding && root.blurPercent === p.blurPercent) return name
+      if (root.rounding === p.rounding && root.blurPercent === p.blurPercent && root.opacityPercent === p.opacityPercent) return name
     }
     return "custom"
   }
@@ -85,29 +88,34 @@ Item {
     root.activePreset = name
     root.rounding = p.rounding
     root.blurPercent = p.blurPercent
+    root.opacityPercent = p.opacityPercent
     root.blurEnabled = true
     applyLive(root.rounding, true, root.blurPercent)
     persistNow()
   }
 
-  // Master switch flattens to rounding=0 / blur off, remembering the previous
+  // Master switch flattens to rounding=0 / blur off / opaque, remembering the previous
   // values for this session so switching back on restores them.
-  readonly property bool masterEnabled: root.rounding > 0 || root.blurEnabled
+  readonly property bool masterEnabled: root.rounding > 0 || root.blurEnabled || root.opacityPercent < 100
   property int savedRounding: 8
   property int savedBlurPercent: 40
+  property int savedOpacityPercent: 92
   property string savedPreset: "default"
 
   function toggleMaster() {
     if (root.masterEnabled) {
       root.savedRounding = root.rounding
       root.savedBlurPercent = root.blurPercent
+      root.savedOpacityPercent = root.opacityPercent
       root.savedPreset = root.activePreset
       root.rounding = 0
+      root.opacityPercent = 100
       root.blurEnabled = false
       applyLive(0, false, root.blurPercent)
     } else {
       root.rounding = root.savedRounding
       root.blurPercent = root.savedBlurPercent
+      root.opacityPercent = root.savedOpacityPercent
       root.blurEnabled = true
       root.activePreset = root.savedPreset
       applyLive(root.rounding, true, root.blurPercent)
@@ -147,14 +155,17 @@ Item {
   property bool roundingLoaded: false
   property bool blurEnabledLoaded: false
   property bool blurSizeLoaded: false
-  readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded
+  property bool opacityLoaded: false
+  readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded && opacityLoaded
   onLoadedChanged: if (loaded) root.activePreset = root.detectPreset()
 
   function refresh() {
     roundingLoaded = false
     blurEnabledLoaded = false
     blurSizeLoaded = false
+    opacityLoaded = false
     roundingProbe.running = true
+    opacityProbe.running = true
     blurEnabledProbe.running = true
     blurSizeProbe.running = true
   }
@@ -198,16 +209,30 @@ Item {
     }
   }
 
+  Process {
+    id: opacityProbe
+    command: ["hyprctl", "-j", "getoption", "decoration:active_opacity"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try { root.opacityPercent = root.clampInt(JSON.parse(text).float * 100, 50, 100, root.opacityPercent) } catch (e) {}
+        root.opacityLoaded = true
+      }
+    }
+  }
+
   // ------------------------------------------------------------ live apply
   property bool applyQueued: false
   property int queuedRounding: rounding
   property bool queuedBlurEnabled: blurEnabled
   property int queuedBlurPercent: blurPercent
+  property int queuedOpacityPercent: opacityPercent
 
-  function applyLive(r, enabled, percent) {
+  function applyLive(r, enabled, percent, opacity) {
     queuedRounding = root.clampInt(r, 0, 20, root.rounding)
     queuedBlurEnabled = !!enabled
     queuedBlurPercent = root.clampInt(percent, 0, 100, root.blurPercent)
+    queuedOpacityPercent = root.clampInt(opacity === undefined ? root.opacityPercent : opacity, 50, 100, root.opacityPercent)
     if (applyProc.running) { applyQueued = true; return }
     runApply()
   }
@@ -215,7 +240,7 @@ Item {
   function runApply() {
     applyQueued = false
     applyProc.command = ["hyprctl", "eval", root.decorationConfig(queuedRounding, queuedBlurEnabled,
-      blurSizeFor(queuedBlurPercent), blurPassesFor(queuedBlurPercent))]
+      blurSizeFor(queuedBlurPercent), blurPassesFor(queuedBlurPercent), queuedOpacityPercent)]
     applyProc.running = true
   }
 
@@ -228,10 +253,13 @@ Item {
   }
 
   // --------------------------------------------------------------- persist
-  function decorationConfig(rounding, blurEnabled, size, passes) {
+  function decorationConfig(rounding, blurEnabled, size, passes, opacity) {
+    var alpha = (opacity / 100).toFixed(2)
     return "hl.config({\n"
       + "  decoration = {\n"
       + "    rounding = " + rounding + ",\n"
+      + "    active_opacity = " + alpha + ",\n"
+      + "    inactive_opacity = " + alpha + ",\n"
       + "    blur = {\n"
       + "      enabled = " + (blurEnabled ? "true" : "false") + ",\n"
       + "      size = " + size + ",\n"
@@ -245,7 +273,7 @@ Item {
 
   function persistNow() {
     var block = root.decorationConfig(root.rounding, root.blurEnabled,
-      blurSizeFor(root.blurPercent), blurPassesFor(root.blurPercent)) + "\n"
+      blurSizeFor(root.blurPercent), blurPassesFor(root.blurPercent), root.opacityPercent) + "\n"
     persistProc.command = ["python3", root.pluginDir + "/install-looknfeel.py", root.blockId, block]
     persistProc.running = true
   }
@@ -256,6 +284,12 @@ Item {
     root.rounding = root.clampInt(v, 0, 20, root.rounding)
     root.blurEnabled = true
     applyLive(root.rounding, true, root.blurPercent)
+    persistNow()
+  }
+
+  function setOpacityPercent(v) {
+    root.opacityPercent = root.clampInt(v, 50, 100, root.opacityPercent)
+    applyLive(root.rounding, root.blurEnabled, root.blurPercent)
     persistNow()
   }
 
@@ -482,6 +516,43 @@ Item {
                 value: root.blurPercent
                 onMoved: function(v) { root.applyLive(root.rounding, true, v) }
                 onReleased: function(v) { root.setBlurPercent(v) }
+              }
+            }
+
+            Column {
+              width: parent.width
+              spacing: Style.space(6)
+              Row {
+                width: parent.width
+                Text {
+                  id: opacityHeader
+                  text: "WINDOW OPACITY"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
+                Item { width: parent.width - opacityHeader.implicitWidth - opacityValue.implicitWidth; height: 1 }
+                Text {
+                  id: opacityValue
+                  text: Math.round(opacitySlider.dragging ? opacitySlider.liveValue : root.opacityPercent) + "%"
+                  color: Qt.darker(root.foreground, 1.4)
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+              }
+              PanelSlider {
+                id: opacitySlider
+                bar: palette
+                width: parent.width
+                height: Style.space(20)
+                minimum: 50
+                maximum: 100
+                step: 1
+                integer: true
+                value: root.opacityPercent
+                onMoved: function(v) { root.applyLive(root.rounding, root.blurEnabled, root.blurPercent, v) }
+                onReleased: function(v) { root.setOpacityPercent(v) }
               }
             }
           }

@@ -37,5 +37,15 @@ require("default.hypr.toggles")
 -- is the only weight Qt can pick. Needs `omarchy restart shell` to apply.
 hl.env("OMARCHY_MENU_FONT", "JetBrainsMono Heavy")
 
--- OmaOptions: per-device scroll speed for the Logitech mouse (omaoptions apply).
-require("default.hypr.require_optional").module("hypr.omaoptions")
+
+-- GTK4 GPU rendering is broken on the experimental asahi_m4 GPU driver:
+-- Vulkan hangs in a drm_syncobj wait and GL fails DRM_IOCTL_ASAHI_QUEUE_CREATE,
+-- so Nautilus and other GTK4 apps never open a window. Render in software.
+hl.env("GSK_RENDERER", "cairo")
+hl.env("GDK_DISABLE", "gl,vulkan")
+
+-- Browsers stay fully opaque whatever the Rounding & Blur window opacity is:
+-- `override` sets the value outright instead of multiplying the global one.
+-- Same classes Omarchy tags as browsers in default/hypr/apps/browser.lua.
+o.window("((google-)?[cC]hrom(e|ium)|[bB]rave-browser|[mM]icrosoft-edge|Vivaldi-stable|helium|[fF]irefox|zen|librewolf)",
+  { opacity = "1.0 override 1.0 override" })

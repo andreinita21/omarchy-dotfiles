@@ -66,7 +66,9 @@ def main() -> int:
     config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.join(
         os.path.expanduser("~"), ".config"
     )
-    path = os.path.join(config_home, "hypr", "looknfeel.lua")
+    # ~/.config/hypr is a symlink into ~/dotfiles, so resolve the directory
+    # once and write the real file; the file itself must still not be a link.
+    path = os.path.join(os.path.realpath(os.path.join(config_home, "hypr")), "looknfeel.lua")
     begin = f"-- BEGIN {plugin_id}"
     end = f"-- END {plugin_id}"
     chunk = f"{begin}\n{block}{end}\n"

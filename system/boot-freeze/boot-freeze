@@ -1,0 +1,192 @@
+#!/bin/bash
+# boot-freeze: keep the custom J773g boot chain (gravity kernel, m1n1, U-Boot,
+# Limine, UKI) exactly as it is while Omarchy updates everything else.
+#
+#   boot-freeze status        show whether the boot files match the frozen copy
+#   boot-freeze save          freeze the boot files as they are now (known-good)
+#   boot-freeze enforce       put back any frozen boot file that changed
+#   boot-freeze unlock        allow boot-chain changes until `lock` or reboot
+#   boot-freeze lock          end an unlock and freeze the new boot files
+#   boot-freeze guard         pacman PreTransaction hook (reads targets on stdin)
+#
+# pacman runs `guard` before and `enforce` after every transaction; Omarchy's
+# post-update hook runs `enforce` again after migrations, which call
+# mkinitcpio, update-m1n1 and the Limine tools outside pacman.
+
+set -uo pipefail
+
+STATE=/var/lib/boot-freeze
+GOLDEN=$STATE/golden
+UNLOCK=/run/boot-freeze.unlocked
+ESP=/boot/efi
+LIMINE_CONF=$ESP/limine.conf
+UKI_REL=EFI/Linux/omarchy_linux-gravity-m4.efi
+
+# The packages whose files the frozen boot files were built from.
+BOOT_PKGS=(linux-gravity-m4 m1n1-gravity uboot-gravity)
+
+FROZEN=(
+  "$ESP/m1n1/boot.bin"
+  "$ESP/EFI/BOOT/BOOTAA64.EFI"
+  "$ESP/EFI/limine/limine_aa64.efi"
+  "$ESP/$UKI_REL"
+  "$ESP/vendorfw/firmware.cpio"
+  "$ESP/vendorfw/firmware.tar"
+  /boot/vmlinuz-linux-gravity-m4
+  /boot/initramfs-linux-gravity-m4.img
+  /etc/m1n1.conf
+)
+
+red() { printf '\e[31m%s\e[0m\n' "$*" >&2; }
+yellow() { printf '\e[33m%s\e[0m\n' "$*" >&2; }
+green() { printf '\e[32m%s\e[0m\n' "$*"; }
+
+need_root() {
+  ((EUID == 0)) || { red "boot-freeze $1 needs root: sudo boot-freeze $1"; exit 1; }
+}
+
+mount_esp() {
+  mountpoint -q "$ESP" || mount "$ESP" || { red "boot-freeze: cannot mount $ESP"; exit 1; }
+}
+
+pkg_versions() {
+  pacman -Q "${BOOT_PKGS[@]}" 2>/dev/null
+}
+
+# The lines of limine.conf that decide what boots: everything above the
+# snapshot entries, limited to the keys that select and start a kernel.
+# Theme colours and snapshot entries may change freely.
+limine_boot_lines() {
+  sed '/^[[:space:]]*\/\/Snapshots/,$d' "$1" |
+    grep -E '^[[:space:]]*(default_entry|protocol|path|kernel_path|module_path|cmdline|kernel_cmdline):'
+}
+
+cmd_save() {
+  need_root save
+  mount_esp
+  local f tmp=$STATE/golden.new
+  rm -rf "$tmp"
+  mkdir -p "$tmp"
+  for f in "${FROZEN[@]}" "$LIMINE_CONF"; do
+    [[ -f $f ]] || { yellow "not frozen (missing): $f"; continue; }
+    install -D -m600 "$f" "$tmp$f"
+  done
+  pkg_versions >"$tmp/versions"
+  date -Is >"$tmp/saved-at"
+  rm -rf "$STATE/golden.prev"
+  [[ -d $GOLDEN ]] && mv "$GOLDEN" "$STATE/golden.prev"
+  mv "$tmp" "$GOLDEN"
+  sync
+  green "boot-freeze: froze the boot chain ($(tr '\n' ' ' <"$GOLDEN/versions"))"
+}
+
+# Prints each drifted path; returns 1 if anything drifted.
+drift() {
+  local f rc=0
+  for f in "${FROZEN[@]}"; do
+    [[ -f $GOLDEN$f ]] || continue
+    cmp -s "$GOLDEN$f" "$f" || { echo "$f"; rc=1; }
+  done
+  if [[ -f $GOLDEN$LIMINE_CONF ]] &&
+    ! diff -q <(limine_boot_lines "$GOLDEN$LIMINE_CONF") <(limine_boot_lines "$LIMINE_CONF") &>/dev/null; then
+    echo "$LIMINE_CONF"
+    rc=1
+  fi
+  return $rc
+}
+
+versions_match() {
+  diff -q "$GOLDEN/versions" <(pkg_versions) &>/dev/null
+}
+
+cmd_status() {
+  need_root status
+  mount_esp
+  [[ -d $GOLDEN ]] || { red "boot-freeze: nothing frozen yet (sudo boot-freeze save)"; exit 1; }
+  echo "Frozen at:  $(cat "$GOLDEN/saved-at")"
+  echo "Packages:   $(tr '\n' ' ' <"$GOLDEN/versions")"
+  [[ -e $UNLOCK ]] && yellow "UNLOCKED: boot-chain changes are allowed until 'boot-freeze lock' or reboot"
+  versions_match || yellow "Installed boot packages differ from the frozen ones: $(pkg_versions | tr '\n' ' ')"
+  local drifted
+  if drifted=$(drift); then
+    green "Boot chain matches the frozen copy."
+  else
+    yellow "Changed since freezing:"
+    sed 's/^/  /' <<<"$drifted" >&2
+    exit 1
+  fi
+}
+
+cmd_enforce() {
+  need_root enforce
+  if [[ -e $UNLOCK ]]; then
+    yellow "boot-freeze: unlocked, leaving the boot files alone (sudo boot-freeze lock when done)"
+    return 0
+  fi
+  [[ -d $GOLDEN ]] || { yellow "boot-freeze: nothing frozen yet, nothing enforced"; return 0; }
+  mount_esp
+
+  # Restoring a kernel image over a different installed kernel package would
+  # pair it with the wrong modules. The guard should make this impossible.
+  if ! versions_match; then
+    red "boot-freeze: the boot packages changed since freezing; NOT restoring anything."
+    red "  frozen:    $(tr '\n' ' ' <"$GOLDEN/versions")"
+    red "  installed: $(pkg_versions | tr '\n' ' ')"
+    red "Check the boot chain before rebooting, then run: sudo boot-freeze save"
+    return 1
+  fi
+
+  local drifted f restored=0
+  drifted=$(drift) && return 0
+  # The UKI's hash lives in limine.conf, so the two go back together.
+  grep -qxF "$ESP/$UKI_REL" <<<"$drifted" && drifted+=$'\n'$LIMINE_CONF
+  echo -e "\e[33m\nboot-freeze: restoring the frozen boot chain:\e[0m"
+  while IFS= read -r f; do
+    [[ -n $f ]] || continue
+    cp --no-preserve=all "$GOLDEN$f" "$f.boot-freeze" && mv -f "$f.boot-freeze" "$f" ||
+      { red "  FAILED: $f"; continue; }
+    echo "  $f"
+    restored=1
+  done < <(awk '!seen[$0]++' <<<"$drifted")
+  sync
+  ((restored)) && green "boot-freeze: boot chain is back to the frozen, known-good state."
+  drift >/dev/null || { red "boot-freeze: some boot files still differ, do not reboot: sudo boot-freeze status"; return 1; }
+}
+
+cmd_guard() {
+  local targets
+  targets=$(cat)
+  [[ -n $targets ]] || exit 0
+  if [[ -e $UNLOCK ]]; then
+    yellow "boot-freeze: unlocked, allowing changes to: $(tr '\n' ' ' <<<"$targets")"
+    exit 0
+  fi
+  red ""
+  red "boot-freeze: this transaction would change the protected boot chain:"
+  sed 's/^/  /' <<<"$targets" >&2
+  red ""
+  red "This machine runs a custom gravity kernel/m1n1/U-Boot, so nothing was changed."
+  red "The update stopped here on purpose; your system is untouched and still boots."
+  red "To change the boot chain on purpose: sudo boot-freeze unlock, run it, then sudo boot-freeze lock"
+  exit 1
+}
+
+case ${1:-status} in
+  status) cmd_status ;;
+  save) cmd_save ;;
+  enforce) cmd_enforce ;;
+  guard) cmd_guard ;;
+  unlock)
+    need_root unlock
+    touch "$UNLOCK"
+    yellow "boot-freeze: unlocked until 'sudo boot-freeze lock' or reboot." ;;
+  lock)
+    need_root lock
+    if [[ -e $UNLOCK ]]; then
+      rm -f "$UNLOCK"
+      cmd_save
+    else
+      green "boot-freeze: already locked."
+    fi ;;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

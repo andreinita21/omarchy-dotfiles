@@ -1,0 +1,7 @@
+# boot-freeze: Omarchy migrations run mkinitcpio, update-m1n1 and the Limine
+# tools outside pacman, so enforce the frozen boot chain once more after them.
+# omarchy update still holds its sudo authorization here.
+if [[ -x /usr/local/sbin/boot-freeze ]]; then
+  sudo -n /usr/local/sbin/boot-freeze enforce ||
+    echo -e "\e[31mboot-freeze could not verify the boot chain. Before rebooting run: sudo boot-freeze status\e[0m"
+fi

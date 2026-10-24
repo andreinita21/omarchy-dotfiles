@@ -1,0 +1,13 @@
+# boot-freeze: after every transaction, put back any frozen boot file that a
+# hook (mkinitcpio, update-m1n1, Limine deploy) rewrote. Sorts after them.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Restoring the frozen J773g boot chain if anything touched it...
+When = PostTransaction
+Exec = /usr/local/sbin/boot-freeze enforce

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=Utility;
+Comment=OpenRGB 1.1
+Icon=OpenRGB
+Name=OpenRGB
+StartupNotify=true
+Terminal=false
+Type=Application
+Exec=/usr/bin/openrgb --startminimized

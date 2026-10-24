@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Keep Chrome/Chromium on the Andrei Nita browser color whatever theme is set.
+# Keep Chrome/Chromium on the Andrei Nita browser color on every theme except
+# the ones listed in the case below.
 # Omarchy has already applied the new theme's color by the time this runs, so
 # overwrite the current theme's chromium.theme and re-apply the browser policy.
 
@@ -8,6 +9,11 @@ set -euo pipefail
 
 source_theme="$HOME/.config/omarchy/themes/andrei-nita/chromium.theme"
 current_theme="$HOME/.local/state/omarchy/current/theme/chromium.theme"
+
+# Themes that keep their own browser color (Omarchy's generated chromium.theme).
+case "$(<"$HOME/.local/state/omarchy/current/theme.name")" in
+  osaka-jade | matrix) exit 0 ;;
+esac
 
 [[ -f $source_theme ]] || exit 0
 cmp -s "$source_theme" "$current_theme" && exit 0

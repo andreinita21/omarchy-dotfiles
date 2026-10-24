@@ -1,0 +1,26 @@
+# boot-freeze: refuse any transaction that installs, upgrades or removes the
+# kernel, m1n1, U-Boot or the custom gravity/J773g packages.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = linux
+Target = linux-*
+Target = !linux-firmware
+Target = !linux-firmware-*
+Target = !linux-api-headers
+Target = m1n1
+Target = m1n1-*
+Target = uboot-*
+Target = u-boot*
+Target = asahi-meta
+Target = mesa-gravity-m4
+Target = omarchy-j773g
+
+[Action]
+Description = Checking the frozen J773g boot chain...
+When = PreTransaction
+Exec = /usr/local/sbin/boot-freeze guard
+NeedsTargets
+AbortOnFail

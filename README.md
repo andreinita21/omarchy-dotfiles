@@ -66,7 +66,7 @@ finishes it prints the few steps that can't be automated. Reboot afterwards.
 | 5 | Symlinks every tracked config into `$HOME`, backing up what was there | `links.txt` → `home/` |
 | 6 | Rewrites absolute home paths if your username differs | `.source-home` |
 | 7 | Clones third-party themes and shell plugins, builds the AirPods daemon | `omarchy/git-clones.txt` |
-| 8 | Installs mise tools, ble.sh, rustup and omadrop | [`dot`](dot) |
+| 8 | Installs mise tools, ble.sh, rustup | [`dot`](dot) |
 | 9 | Removes the deleted default web apps, loads GTK settings, applies theme and wallpaper | `omarchy/apps-remove.txt`, `dconf.ini`, `state/` |
 | 10 | Offers to restore the encrypted private vault (see below) | private repo `omarchy-vault` |
 
@@ -153,8 +153,6 @@ A few files describe this specific machine (a Lenovo ThinkPad T14 Gen 5) and
 should be reviewed on different hardware:
 
 - **`home/.config/hypr/monitors.lua`**: output names, resolutions and scaling.
-- **`system/etc/nbfc/`**: fan-control profile for the T14 Gen 5. Pick another
-  profile with `nbfc config -s` or remove the file.
 - **CPU and GPU packages** (`intel-ucode`, `vulkan-intel`, `intel-lpmd`,
   `thermald`): swap them for your platform's equivalents in `packages/pacman.txt`.
 
@@ -181,8 +179,6 @@ Third-party pieces installed by the setup script:
 | [omarchy-omablur](https://github.com/Charlieras262/omarchy-omablur) | Charlieras262 |
 | [Omarchy-music-flow](https://github.com/Clifford-Baidoo/Omarchy-music-flow) | Clifford-Baidoo |
 | [omarchy-pods](https://github.com/thisisgm/omarchy-pods) | thisisgm |
-| [omarchy-nbfc-linux-plugin](https://github.com/kshatriya-abhay/omarchy-nbfc-linux-plugin) | kshatriya-abhay |
-| [omadrop](https://github.com/btsouth/omadrop) | btsouth |
 | [ble.sh](https://github.com/akinomyoga/ble.sh) | akinomyoga |
 
 Each remains under its own license.

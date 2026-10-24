@@ -52,18 +52,19 @@
 -- BEGIN charlieras262.omablur
 hl.config({
   decoration = {
-    rounding = 14,
+    rounding = 20,
+    active_opacity = 1.00,
+    inactive_opacity = 1.00,
     blur = {
       enabled = true,
-      size = 14,
-      passes = 3,
+      size = 9,
+      passes = 2,
       new_optimizations = true,
       ignore_opacity = true,
     },
   },
 })
 -- END charlieras262.omablur
-
 -- BEGIN andrei.gaps
 hl.config({
   general = {
@@ -72,3 +73,46 @@ hl.config({
   },
 })
 -- END andrei.gaps
+
+-- BEGIN andrei.columns
+-- Equal-width columns for the ultrawide: 1 window = full, 2 = halves,
+-- 3 = thirds, 4 = quarters. Past 4 windows a new row starts, with windows
+-- spread evenly across rows (5 = 3+2, 6 = 3+3, 7 = 4+3, 8 = 4+4, 9+ = 3 rows).
+local max_columns = 4
+
+hl.layout.register("columns", {
+  recalculate = function(ctx)
+    local n = #ctx.targets
+    if n == 0 then
+      return
+    end
+
+    local area = ctx.area
+    local rows = math.ceil(n / max_columns)
+    local row_h = area.h / rows
+    local i = 1
+
+    for row = 0, rows - 1 do
+      -- Earlier rows take the extra window when n doesn't divide evenly.
+      local cols = math.floor(n / rows) + (row < n % rows and 1 or 0)
+      local col_w = area.w / cols
+
+      for col = 0, cols - 1 do
+        ctx.targets[i]:place({
+          x = area.x + col * col_w,
+          y = area.y + row * row_h,
+          w = col_w,
+          h = row_h,
+        })
+        i = i + 1
+      end
+    end
+  end,
+})
+
+hl.config({
+  general = {
+    layout = "lua:columns",
+  },
+})
+-- END andrei.columns

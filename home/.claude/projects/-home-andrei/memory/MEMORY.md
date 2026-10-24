@@ -2,3 +2,5 @@
 - [Omarchy shell plugin dev gotchas](omarchy-shell-plugin-dev.md) — Lua config needs hyprctl eval not keyword; restart shell after plugin edits
 - [OmaOptions plugin](logi-plugin.md) — github.com/andreinita21/omaoptions; Solaar-based engine (never logiops), per-device config, HID++ traffic stutters the mouse
 - [Samsung G85SD over HDMI](samsung-g85sd-hdmi.md) — 3440x1440 needs custom modeline; omamonitor emits modelines for non-EDID modes
+- [aarch64 Asahi app limits](aarch64-asahi-apps.md) — ARM machine: no native Discord; Chromium web-app windows have class "Chromium"; GTK4 must render in software (cairo)
+- [boot-freeze](boot-freeze.md) — guards custom gravity kernel/m1n1 boot chain on omarchy update; sudo boot-freeze unlock/lock to change it
