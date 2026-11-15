@@ -8,7 +8,7 @@
 #   - shell plugins: andrei.bar, andrei.workspaces, andrei.gaps,
 #     andrei.rounding-blur, andreinita21.omamonitor, custom.media (Music Flow)
 #   - themes: andrei-nita, cookie-monster, neon-purple, ocult-records,
-#     osaka-jade (kept in this repo: Omarchy 4.5 dropped it for jade-horse),
+#     jade-osaka (Osaka Jade, kept in this repo: Omarchy 4.5 dropped it),
 #     matrix, neon-dusk, plus the stock jade-horse, starship, tokyo-night.
 #     The other stock themes are hidden (omarchy/themes-remove.txt).
 #   - ble.sh (terminal autosuggestions / completion)

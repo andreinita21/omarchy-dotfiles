@@ -82,7 +82,8 @@ exactly this ThinkPad setup and nothing else:
 - shell plugins `andrei.bar`, `andrei.workspaces`, `andrei.gaps`,
   `andrei.rounding-blur`, `andreinita21.omamonitor`, `custom.media`
 - themes `andrei-nita`, `cookie-monster`, `neon-purple`, `ocult-records`,
-  `osaka-jade` (kept here because Omarchy 4.5 replaced it with Jade Horse),
+  `jade-osaka` (the old Osaka Jade, kept here because Omarchy 4.5 replaced it
+  with Jade Horse; named so it sits next to Jade Horse in the picker),
   `matrix`, `neon-dusk` and the stock `jade-horse`, `starship`, `tokyo-night`;
   every other stock theme is hidden via pacman `NoExtract`
 - ble.sh for terminal autosuggestions
