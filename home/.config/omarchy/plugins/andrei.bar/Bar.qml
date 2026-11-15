@@ -39,6 +39,17 @@ Item {
   // killing the entire shell. Hidden panels stay mapped but park off-screen
   // without an exclusion zone; updated by the FileView watcher further down.
   property bool barHidden: false
+  // Omarchy's screensaver is a fullscreen window on a special workspace, and
+  // Hyprland draws Top-layer surfaces above special workspaces, so the bar would
+  // sit on top of it. While one is mapped the bar blanks itself (see BarPanel).
+  readonly property string screensaverAppId: "org.omarchy.screensaver"
+  readonly property bool screensaverShown: {
+    var list = ToplevelManager.toplevels.values
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].appId === root.screensaverAppId) return true
+    }
+    return false
+  }
   property string home: Quickshell.env("HOME")
   property string stateHome: home + "/.local/state"
   property string omarchyConfigDir: home + "/.config/omarchy"
@@ -1368,13 +1379,20 @@ Item {
 
     implicitWidth: root.vertical ? root.barSize : 0
     implicitHeight: root.vertical ? 0 : root.barSize
-    color: root.barModeManaged ? root.barModeBackground
+    // Under the screensaver the surface stays mapped and keeps its exclusion
+    // zone (so tiled windows don't reflow), but draws nothing and takes no input.
+    color: root.screensaverShown ? "transparent"
+      : root.barModeManaged ? root.barModeBackground
       : root.barMode === "transparent" || root.transparent ? "transparent" : root.background
+    mask: root.screensaverShown ? screensaverInputRegion : null
     surfaceFormat.opaque: false
     WlrLayershell.namespace: "omarchy-bar"
     WlrLayershell.layer: WlrLayer.Top
 
+    Region { id: screensaverInputRegion }
+
     Loader {
+      visible: !root.screensaverShown
       anchors.fill: parent
       sourceComponent: root.vertical ? verticalBar : horizontalBar
 
