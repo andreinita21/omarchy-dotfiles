@@ -82,8 +82,9 @@ exactly this ThinkPad setup and nothing else:
 - shell plugins `andrei.bar`, `andrei.workspaces`, `andrei.gaps`,
   `andrei.rounding-blur`, `andreinita21.omamonitor`, `custom.media`
 - themes `andrei-nita`, `cookie-monster`, `neon-purple`, `ocult-records`,
-  `matrix`, `neon-dusk` and the stock `jade-horse`, `osaka-jade`, `starship`,
-  `tokyo-night`; every other stock theme is hidden via pacman `NoExtract`
+  `osaka-jade` (kept here because Omarchy 4.5 replaced it with Jade Horse),
+  `matrix`, `neon-dusk` and the stock `jade-horse`, `starship`, `tokyo-night`;
+  every other stock theme is hidden via pacman `NoExtract`
 - ble.sh for terminal autosuggestions
 
 Packages, dev tooling (mise, rustup) and dconf are asked about, default no.

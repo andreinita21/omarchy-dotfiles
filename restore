@@ -7,8 +7,9 @@
 #   - configs and scripts from links.txt (Hyprland, terminals, nvim, bash, ...)
 #   - shell plugins: andrei.bar, andrei.workspaces, andrei.gaps,
 #     andrei.rounding-blur, andreinita21.omamonitor, custom.media (Music Flow)
-#   - themes: andrei-nita, cookie-monster, neon-purple, ocult-records, matrix,
-#     neon-dusk, plus the stock jade-horse, osaka-jade, starship, tokyo-night.
+#   - themes: andrei-nita, cookie-monster, neon-purple, ocult-records,
+#     osaka-jade (kept in this repo: Omarchy 4.5 dropped it for jade-horse),
+#     matrix, neon-dusk, plus the stock jade-horse, starship, tokyo-night.
 #     The other stock themes are hidden (omarchy/themes-remove.txt).
 #   - ble.sh (terminal autosuggestions / completion)
 #
