@@ -1,5 +1,0 @@
-linux-gravity-m4
-m1n1-gravity
-mesa-gravity-m4
-omarchy-j773g
-uboot-gravity

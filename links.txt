@@ -70,6 +70,7 @@
 .local/bin/chromium-violet-dark
 .local/bin/andrei-lid-close
 .local/bin/andrei-lid-open
+.local/bin/andrei-look
 
 # AI agent launchers (lazy mise installers)
 .local/bin/claude
