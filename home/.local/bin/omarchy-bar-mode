@@ -34,8 +34,9 @@ esac
 mkdir -p "$(dirname "$MODE_FILE")"
 printf '%s\n' "$target" >"$MODE_FILE"
 
-# The bar repaints from this straight away. No Hyprland reload: the blur rule in
-# hypr/barmode.lua is permanent and only bites when the bar paints its scrim.
+# The bar repaints from this straight away; hypr/barmode.lua re-reads the file
+# on the reload below to add or drop the blur layer rule.
 omarchy-shell -q omarchy.bar setMode "$target"
+hyprctl reload >/dev/null
 
 omarchy-notification-send "Bar: $target" -t 1200

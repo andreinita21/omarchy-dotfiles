@@ -98,21 +98,10 @@ Item {
   readonly property string barModePath: stateHome + "/omarchy/bar-mode"
   property string barMode: "transparent"
   readonly property bool barModeManaged: barMode === "blur" || barMode === "oled"
-  // Blur mode is the same glass as the terminals: the theme's background
-  // colour at the terminal opacity set in the Rounding & Blur popup
-  // (andrei-look), with Hyprland's shared blur behind it. glassAlpha stays
-  // above the 0.3 ignore_alpha of the bar's blur rule (hypr/barmode.lua).
-  property real glassAlpha: 0.85
-  readonly property color glassTint: Color.bar.background
-  readonly property color barModeBackground: barMode === "oled" ? Qt.rgba(0, 0, 0, 1)
-    : Qt.rgba(glassTint.r, glassTint.g, glassTint.b, glassAlpha)
-  readonly property color barModeForeground: barMode === "oled" ? readableOnBlack(themeForeground) : themeForeground
-
-  function setGlassAlpha(value) {
-    var a = Number(value)
-    if (!isFinite(a)) return
-    root.glassAlpha = Math.max(0.3, Math.min(1, a))
-  }
+  // Alpha low enough for Hyprland's blur to read through, high enough to keep
+  // bar text legible over a bright wallpaper.
+  readonly property color barModeBackground: barMode === "oled" ? Qt.rgba(0, 0, 0, 1) : Qt.rgba(0, 0, 0, 0.45)
+  readonly property color barModeForeground: readableOnBlack(themeForeground)
 
   // A theme picks its bar text to suit its own bar background, which may be
   // light; on a black bar that text would be invisible, so anything too dark
@@ -1257,17 +1246,11 @@ Item {
     command: ["bash", "-c", "cat \"$HOME/.local/state/omarchy/bar-mode\" 2>/dev/null || echo transparent"]
     stdout: SplitParser { onRead: function(line) { root.setBarMode(line) } }
   }
-  Process {
-    id: glassProbe
-    running: true
-    command: ["bash", "-c", "python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get(\"opacity\", 85) / 100)' \"$HOME/.local/state/omarchy/andrei-look.json\" 2>/dev/null || echo 0.85"]
-    stdout: SplitParser { onRead: function(line) { root.setGlassAlpha(String(line).trim()) } }
-  }
   FileView {
     path: root.stateHome + "/omarchy"
     watchChanges: true
     printErrors: false
-    onFileChanged: { barModeProbe.running = true; glassProbe.running = true }
+    onFileChanged: barModeProbe.running = true
   }
 
   // The directory watch can permanently stop delivering events after flag
@@ -1290,11 +1273,6 @@ Item {
     // Applied straight away so a keypress doesn't wait on the directory watch.
     function setMode(mode: string): void {
       root.setBarMode(mode)
-    }
-
-    // Pushed by andrei-look so the bar follows the terminal opacity live.
-    function setGlass(alpha: string): void {
-      root.setGlassAlpha(alpha)
     }
   }
 

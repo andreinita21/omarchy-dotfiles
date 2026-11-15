@@ -41,16 +41,8 @@ hl.env("OMARCHY_MENU_FONT", "JetBrainsMono Heavy")
 -- GTK4 GPU rendering is broken on the experimental asahi_m4 GPU driver:
 -- Vulkan hangs in a drm_syncobj wait and GL fails DRM_IOCTL_ASAHI_QUEUE_CREATE,
 -- so Nautilus and other GTK4 apps never open a window. Render in software.
--- Only on Apple Silicon: on x86 machines this would just make GTK4 slow.
-local dt = io.open("/proc/device-tree/compatible")
-if dt then
-  local compatible = dt:read("*a") or ""
-  dt:close()
-  if compatible:find("apple,", 1, true) then
-    hl.env("GSK_RENDERER", "cairo")
-    hl.env("GDK_DISABLE", "gl,vulkan")
-  end
-end
+hl.env("GSK_RENDERER", "cairo")
+hl.env("GDK_DISABLE", "gl,vulkan")
 
 -- Browsers stay fully opaque whatever the Rounding & Blur window opacity is:
 -- `override` sets the value outright instead of multiplying the global one.

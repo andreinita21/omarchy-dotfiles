@@ -1,0 +1,5 @@
+aether
+moonlight-qt
+obsidian
+pinta
+ufw-docker
