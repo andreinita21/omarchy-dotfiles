@@ -25,6 +25,29 @@ edit made anywhere is already under version control. Anything that can't be
 symlinked (packages, services, `/etc` files, GTK settings, the active theme) is
 **snapshotted** into plain-text lists that the installer replays.
 
+## Branches
+
+Each machine has its own branch. Every branch has the same configs, but its
+package lists, services, `/etc` files and desktop state come from that one
+machine.
+
+| Branch | Machine | Notes |
+|--------|---------|-------|
+| [`main`](../../tree/main) | Apple M4 Mac (Asahi / Apple Silicon) | asahi packages, gravity kernel, m1n1/U-Boot |
+| [`thinkpad-t14-gen5`](../../tree/thinkpad-t14-gen5) | Lenovo ThinkPad T14 Gen 5 (x86, Omarchy 4.5) | Intel packages; old lock, idle and background forks off |
+
+Rules of thumb:
+
+- **Clone the branch for the machine you are on.** Running `./dot sync` writes
+  *that machine's* package and service lists, so syncing on the wrong branch
+  overwrites the other machine's snapshot.
+- **Shared config fixes go to both.** Make the change on one branch, then
+  `git cherry-pick` it onto the other. Never merge one machine branch into
+  another, because that mixes their package lists.
+- **New hardware means a new branch.** Branch from whichever machine is
+  closest, set up with `./restore` (or `./dot install`), then run `./dot sync`
+  and push the branch.
+
 ## Highlights
 
 - **Custom Omarchy shell.** A forked status bar with transparent, blur and OLED
@@ -47,9 +70,14 @@ symlinked (packages, services, `/etc` files, GTK settings, the active theme) is
 On a freshly installed Omarchy system, signed in as your normal user:
 
 ```bash
-git clone https://github.com/andreinita21/omarchy-dotfiles.git ~/dotfiles
+# pick the branch for your machine (see Branches above)
+git clone -b thinkpad-t14-gen5 https://github.com/andreinita21/omarchy-dotfiles.git ~/dotfiles
 ~/dotfiles/dot install
 ```
+
+For a fresh install on hardware that isn't on a branch yet, use `./restore`
+instead. It's a selective restore with pickers for plugins and packages. It
+never touches the vault or SDDM, and it skips Apple-Silicon-only packages.
 
 You'll be asked for your `sudo` password once. The installer is **idempotent**:
 if a step fails (a network hiccup, a mirror timeout), just run it again. When it
@@ -82,10 +110,10 @@ To also capture package and system changes and publish them:
 cd ~/dotfiles
 ./dot sync                      # snapshot packages, services, GTK + Omarchy state
 git add -A && git commit -m "Describe the change"
-git push
+git push                        # pushes the current machine's branch
 ```
 
-On another machine: `git pull && ./dot install`.
+On the same machine after a reinstall: `git pull && ./dot install`.
 
 ## Private vault (accounts and sessions)
 
@@ -134,6 +162,7 @@ again on the same machine, because the keys are tied to the adapter.
 ```text
 .
 ├── dot                  # installer / sync tool
+├── restore              # selective restore with pickers (no vault, no SDDM)
 ├── links.txt            # paths symlinked from home/ into $HOME
 ├── home/                # mirror of $HOME for everything in links.txt
 │   ├── .config/hypr/        Hyprland: bindings, input, monitors, look & feel
@@ -149,12 +178,13 @@ again on the same machine, because the keys are tied to the adapter.
 
 ## Adapting to your hardware
 
-A few files describe this specific machine (a Lenovo ThinkPad T14 Gen 5) and
-should be reviewed on different hardware:
+Each branch describes one machine (see [Branches](#branches)). On different
+hardware, review:
 
 - **`home/.config/hypr/monitors.lua`**: output names, resolutions and scaling.
-- **CPU and GPU packages** (`intel-ucode`, `vulkan-intel`, `intel-lpmd`,
-  `thermald`): swap them for your platform's equivalents in `packages/pacman.txt`.
+- **Platform packages** in `packages/pacman.txt`: `asahi-*` on `main`,
+  `intel-ucode`, `vulkan-intel`, `intel-lpmd` and `thermald` on
+  `thinkpad-t14-gen5`. Swap them for your platform's equivalents.
 
 ## Security
 
