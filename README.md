@@ -34,7 +34,7 @@ machine.
 | Branch | Machine | Notes |
 |--------|---------|-------|
 | [`main`](../../tree/main) | Apple M4 Mac (Asahi / Apple Silicon) | asahi packages, gravity kernel, m1n1/U-Boot |
-| [`thinkpad-t14-gen5`](../../tree/thinkpad-t14-gen5) | Lenovo ThinkPad T14 Gen 5 (x86, Omarchy 4.5) | Intel packages; old lock, idle and background forks off |
+| [`thinkpad-t14-gen5`](../../tree/thinkpad-t14-gen5) | Lenovo ThinkPad T14 Gen 5 (x86, Omarchy 4.5) | Intel packages; stock Omarchy lock/idle/background; safe `./restore` |
 
 Rules of thumb:
 
@@ -51,7 +51,7 @@ Rules of thumb:
 ## Highlights
 
 - **Custom Omarchy shell.** A forked status bar with transparent, blur and OLED
-  modes; custom workspaces; background, gaps and rounding/blur plugins; a heavy
+  modes; custom workspaces; gaps and rounding/blur plugins; a heavy
   ExtraBold UI font for the bar and launcher.
 - **Custom themes.** `neon-purple` and `cookie-monster`, plus a user-defined theme
   order, theme and wallpaper cycling keybinds, and animated transitions.
@@ -75,31 +75,39 @@ git clone -b thinkpad-t14-gen5 https://github.com/andreinita21/omarchy-dotfiles.
 ~/dotfiles/dot install
 ```
 
-For a fresh install on hardware that isn't on a branch yet, use `./restore`
-instead. It's a selective restore with pickers for plugins and packages. It
-never touches the vault or SDDM, and it skips Apple-Silicon-only packages.
+On this branch `./dot install` runs [`./restore`](restore), which restores
+exactly this ThinkPad setup and nothing else:
 
-You'll be asked for your `sudo` password once. The installer is **idempotent**:
-if a step fails (a network hiccup, a mirror timeout), just run it again. When it
-finishes it prints the few steps that can't be automated. Reboot afterwards.
+- configs and scripts from `links.txt` (Hyprland, terminals, nvim, bash, ...)
+- shell plugins `andrei.bar`, `andrei.workspaces`, `andrei.gaps`,
+  `andrei.rounding-blur`, `andreinita21.omamonitor`, `custom.media`
+- themes `andrei-nita`, `cookie-monster`, `neon-purple`, `ocult-records`,
+  `matrix`, `neon-dusk` and the stock `jade-horse`, `osaka-jade`, `starship`,
+  `tokyo-night`; every other stock theme is hidden via pacman `NoExtract`
+- ble.sh for terminal autosuggestions
 
-### What `install` does
+Packages, dev tooling (mise, rustup) and dconf are asked about, default no.
 
-| # | Step | Source |
-|---|------|--------|
-| 1 | Hides the removed stock themes via pacman `NoExtract` and deletes them | `omarchy/themes-remove.txt` |
-| 2 | Installs every explicitly installed package, official and AUR | `packages/pacman.txt`, `packages/aur.txt` |
-| 3 | Uninstalls the Omarchy defaults that were removed | `packages/remove.txt` |
-| 4 | Restores tracked `/etc` files and enables system services | `system/` |
-| 5 | Symlinks every tracked config into `$HOME`, backing up what was there | `links.txt` → `home/` |
-| 6 | Rewrites absolute home paths if your username differs | `.source-home` |
-| 7 | Clones third-party themes and shell plugins, builds the AirPods daemon | `omarchy/git-clones.txt` |
-| 8 | Installs mise tools, ble.sh, rustup | [`dot`](dot) |
-| 9 | Removes the deleted default web apps, loads GTK settings, applies theme and wallpaper | `omarchy/apps-remove.txt`, `dconf.ini`, `state/` |
-| 10 | Offers to restore the encrypted private vault (see below) | private repo `omarchy-vault` |
+### Safety: never get locked out again
 
-Files replaced during linking are moved to
-`~/.local/state/dotfiles-backup/<timestamp>/`. Nothing is overwritten in place.
+This machine was locked out three times by earlier restores, so `./restore`:
+
+- keeps **Omarchy's own lock, idle and background** in charge (the old
+  `andrei.lock` / `andrei.idle` / `andrei.background` forks are gone);
+- never touches SDDM, the vault, boot-freeze or `/etc` tweaks;
+- archives your existing configs to `~/.local/state/dotfiles-safety/` first;
+- links [`rescue`](rescue) to `~/desktop-rescue.sh`;
+- **checks the login path before you reboot**: `~/.profile` must source cleanly
+  under `/bin/sh` (uwsm does this at login; one failing line, like sourcing a
+  missing `~/.cargo/env`, sends you straight back to the SDDM login screen in a
+  loop), bash must start, and Hyprland must report no config errors.
+
+If login ever loops anyway: press **CTRL+ALT+F3**, log in, run
+`~/desktop-rescue.sh` (or `~/desktop-rescue.sh --full` to undo everything),
+then `sudo reboot`.
+
+After it finishes, test the lock with SUPER+CTRL+L before rebooting. The vault
+is never restored automatically; run `./dot vault restore` yourself.
 
 ## Everyday use
 
@@ -113,7 +121,7 @@ git add -A && git commit -m "Describe the change"
 git push                        # pushes the current machine's branch
 ```
 
-On the same machine after a reinstall: `git pull && ./dot install`.
+On the same machine after a reinstall: clone this branch and run `./dot install`.
 
 ## Private vault (accounts and sessions)
 
@@ -134,7 +142,7 @@ only holds the lists of what goes in it (`vault/`).
 ```bash
 ./dot vault save            # pack, encrypt (asks for a passphrase), push
 ./dot vault save /mnt/usb   # or write to a directory instead
-./dot vault restore         # download, decrypt and restore (run by install)
+./dot vault restore         # download, decrypt and restore (never automatic)
 ```
 
 The vault is encrypted with GPG (AES256, a passphrase you choose) **and** stored
@@ -146,7 +154,7 @@ again on the same machine, because the keys are tied to the adapter.
 
 | Command | Description |
 |---------|-------------|
-| `./dot install` | Full, re-runnable restore on a fresh Omarchy machine |
+| `./dot install` | Runs `./restore`: safe, re-runnable restore of this setup |
 | `./dot sync` | Refresh all snapshots, repair broken links, run the secret scan |
 | `./dot link` | (Re)create the symlinks only |
 | `./dot adopt` | Start tracking a new path: add it to `links.txt`, then run this |
@@ -162,7 +170,8 @@ again on the same machine, because the keys are tied to the adapter.
 ```text
 .
 ├── dot                  # installer / sync tool
-├── restore              # selective restore with pickers (no vault, no SDDM)
+├── restore              # safe restore of this setup (run by ./dot install)
+├── rescue               # TTY rescue for login loops (~/desktop-rescue.sh)
 ├── links.txt            # paths symlinked from home/ into $HOME
 ├── home/                # mirror of $HOME for everything in links.txt
 │   ├── .config/hypr/        Hyprland: bindings, input, monitors, look & feel

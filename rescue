@@ -1,0 +1,58 @@
+#!/bin/bash
+# Desktop rescue. Run it from a text console when logging in loops back to the
+# login screen, the lock screen misbehaves, or the desktop is broken after a
+# restore. ./restore links it to ~/desktop-rescue.sh.
+#
+#   1. Press CTRL+ALT+F3 (or F2..F6) for a text login and log in
+#   2. Run:  ~/desktop-rescue.sh          fix login + stock shell, keep your configs
+#      or:   ~/desktop-rescue.sh --full   undo the whole dotfiles restore
+#   3. Run:  sudo reboot
+#
+# It never touches ~/Documents, ~/Projects or any other personal files.
+
+set -u
+SAFE="$HOME/.local/state/dotfiles-safety"
+OMA="$HOME/.config/omarchy"
+mkdir -p "$SAFE"
+
+profile_ok() { # uwsm sources these files under /bin/sh at login; one failing line ends the session
+  env -i HOME="$HOME" PATH=/usr/bin:/bin /bin/sh -c '[ -f /etc/profile ] && . /etc/profile; [ -f "$HOME/.profile" ] && . "$HOME/.profile"; true' >/dev/null 2>&1
+}
+
+echo "==> Checking ~/.profile (a failing line here causes an SDDM login loop)"
+if profile_ok; then
+  echo "    ~/.profile OK"
+else
+  mv "$HOME/.profile" "$SAFE/profile.broken.$(date +%s)"
+  echo "    ~/.profile was broken; moved it to $SAFE"
+fi
+
+echo "==> Restoring stock Omarchy shell.json (stock lock, idle, bar)"
+[[ -e $OMA/shell.json || -L $OMA/shell.json ]] && cp -L "$OMA/shell.json" "$SAFE/shell.json.broken.$(date +%s)" 2>/dev/null
+rm -f "$OMA/shell.json"
+if [[ -f $SAFE/shell.json.stock ]]; then
+  cp "$SAFE/shell.json.stock" "$OMA/shell.json"
+else
+  cp "${OMARCHY_PATH:-/usr/share/omarchy}/config/omarchy/shell.json" "$OMA/shell.json"
+fi
+
+echo "==> Moving any custom lock/idle/background plugins out of the way"
+for p in "$OMA"/plugins/*.lock "$OMA"/plugins/*.idle "$OMA"/plugins/*.background; do
+  [[ -e $p || -L $p ]] || continue
+  [[ $(basename "$p") == omarchy.* ]] && continue
+  mv "$p" "$SAFE/$(basename "$p").$(date +%s)" && echo "    moved $(basename "$p")"
+done
+
+if [[ ${1:-} == --full ]]; then
+  echo "==> Removing every symlink that points into ~/dotfiles"
+  find "$HOME" -xdev -path "$HOME/dotfiles" -prune -o -type l -lname "$HOME/dotfiles/*" -print -delete 2>/dev/null
+  latest=$(ls -1t "$SAFE"/pre-restore-*.tar.gz 2>/dev/null | head -1)
+  if [[ -n $latest ]]; then
+    echo "==> Restoring configs from $latest"
+    tar -xzf "$latest" -C "$HOME"
+  fi
+  [[ -f $SAFE/shell.json.stock ]] && cp "$SAFE/shell.json.stock" "$OMA/shell.json"
+fi
+
+echo
+echo "Done. Now run:  sudo reboot"

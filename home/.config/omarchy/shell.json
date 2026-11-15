@@ -29,9 +29,6 @@
           "id": "omarchy.indicators"
         },
         {
-          "id": "io.github.thisisgm.omapods"
-        },
-        {
           "id": "omarchy.bluetooth"
         },
         {
@@ -51,12 +48,16 @@
           "id": "omarchy.clock",
           "format": "HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
-          "verticalFormat": "HH\n—\nmm"
+          "verticalFormat": "HH\n\u2014\nmm"
         }
       ],
       "centerBegin": [],
       "centerEnd": [],
-      "tray": []
+      "tray": [
+        {
+          "id": "superwhisper.panel"
+        }
+      ]
     },
     "position": "top",
     "transparent": true,
@@ -72,28 +73,25 @@
     },
     {
       "id": "andrei.rounding-blur"
-    },
-    {
-      "id": "andrei.lock"
-    },
-    {
-      "id": "andrei.idle"
-    },
-    {
-      "id": "andrei.background"
     }
   ],
   "version": 1,
   "disabledPlugins": [
-    "omarchy.media",
-    "omarchy.lock",
-    "omarchy.idle",
-    "omarchy.background"
+    "omarchy.media"
   ],
   "cloneSourceRestores": [
-    "custom.media",
-    "andrei.lock",
-    "andrei.idle",
-    "andrei.background"
-  ]
+    "custom.media"
+  ],
+  "dock": {
+    "position": "bottom",
+    "pinned": [
+      "org.gnome.Nautilus",
+      "chromium",
+      "foot",
+      "omacalc",
+      "omawrite",
+      "X",
+      "YouTube"
+    ]
+  }
 }

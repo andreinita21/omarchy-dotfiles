@@ -11,7 +11,23 @@
 
 # Desktop: Hyprland, Omarchy shell/bar/menu/themes/plugins/hooks
 .config/hypr
-.config/omarchy
+# ~/.config/omarchy is linked item by item, so plugins other tools install
+# there (e.g. superwhisper-panel) survive. shell.json is not linked: restore
+# writes it and `dot sync` copies it back into the repo.
+.config/omarchy/backgrounds
+.config/omarchy/branding
+.config/omarchy/defaults
+.config/omarchy/extensions
+.config/omarchy/hooks
+.config/omarchy/plymouth
+.config/omarchy/shell.toml
+.config/omarchy/themed
+.config/omarchy/theme-order
+.config/omarchy/themes
+.config/omarchy/plugins/andrei.bar
+.config/omarchy/plugins/andrei.workspaces
+.config/omarchy/plugins/andrei.gaps
+.config/omarchy/plugins/andrei.rounding-blur
 .config/autostart
 .config/hyprland-preview-share-picker
 .config/fontconfig

@@ -1,8 +1,9 @@
 #!/bin/bash
 # Replicate this Omarchy setup on another Omarchy install.
 #
-#   ./dot install   Full restore on a fresh Omarchy machine (packages, system
-#                   tweaks, apps, symlinks, theme/state). Safe to re-run.
+#   ./dot install   Restore this machine's setup on a fresh Omarchy install.
+#                   Runs ./restore (safe: no SDDM, no vault, no lock forks,
+#                   checks the login path). Safe to re-run.
 #   ./dot link      Only (re)create the symlinks from links.txt.
 #   ./dot sync      Snapshot package lists, services, dconf, Omarchy state and
 #                   /etc files into the repo, and heal links an app replaced
@@ -155,6 +156,9 @@ cmd_sync() {
   done
   ok "$(wc -l < "$DOT/omarchy/git-clones.txt") git themes/plugins, $(wc -l < "$DOT/omarchy/apps-remove.txt") removed launchers, $(wc -l < "$DOT/omarchy/themes-remove.txt") hidden stock themes"
   write_gitignore
+  # shell.json is written by ./restore, not linked; copy the live one back.
+  [[ -f $HOME/.config/omarchy/shell.json ]] \
+    && cp "$HOME/.config/omarchy/shell.json" "$REPO_HOME/.config/omarchy/shell.json" && ok "shell.json"
 
   step "Snapshotting Omarchy state"
   local st="$HOME/.local/state/omarchy"
@@ -517,11 +521,6 @@ install_git_clones() {
     fi
   done < <(entries "$DOT/omarchy/git-clones.txt")
 
-  local pods="$HOME/.config/omarchy/plugins/io.github.thisisgm.omapods"
-  if [[ -x $pods/setup && ! -x $HOME/.local/bin/librepods ]]; then
-    step "Building AirPods daemon (omapods)"
-    "$pods/setup" || warn "omapods setup failed; re-run $pods/setup"
-  fi
 }
 
 install_apps() {
@@ -574,34 +573,11 @@ install_desktop_state() {
   omarchy restart shell &>/dev/null
 }
 
+# The old full install (packages, /etc tweaks, every service, vault) is what
+# locked this machine out. `install` now runs the safe ./restore instead; the
+# vault stays a separate, explicit `./dot vault restore`.
 cmd_install() {
-  command -v omarchy >/dev/null || { err "Omarchy not found. Install Omarchy first."; exit 1; }
-  [[ $EUID -eq 0 ]] && { err "Run as your user, not root."; exit 1; }
-  sudo_keepalive
-
-  install_system_tweaks
-  install_packages
-  install_services
-  cmd_link
-  fix_home_paths
-  install_git_clones
-  install_apps
-  install_desktop_state
-
-  if [[ -n $VAULT_REMOTE ]]; then
-    step "Private vault"
-    read -rp "  Restore accounts, browser sessions, keyring, Wi-Fi and Bluetooth from $VAULT_REMOTE? [Y/n] " a
-    [[ ${a,,} == n ]] || vault_restore
-  fi
-
-  step "Done. Manual steps left:"
-  cat <<'EOF'
-  - Skipped the vault?   ./dot vault restore   (accounts, sessions, keyring, Wi-Fi)
-  - Git over HTTPS:      gh auth setup-git
-  - Fingerprint:         omarchy setup security fingerprint (prints are per-sensor)
-  - Monitors:            check ~/.config/hypr/monitors.lua matches this machine's outputs
-  - Reboot to pick up services, kernel modules and the login manager.
-EOF
+  exec "$DOT/restore" "$@"
 }
 
 case "${1:-}" in
