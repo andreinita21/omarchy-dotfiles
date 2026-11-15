@@ -1,7 +1,5 @@
 bt-agent.service
 gnome-keyring-daemon.socket
-librepods.service
-omarchy-asahi-mic.service
 omarchy-crash-watch.service
 omarchy-fcitx5.service
 omarchy-migrate-notify.service
@@ -12,5 +10,6 @@ p11-kit-server.socket
 pipewire-pulse.service
 pipewire-pulse.socket
 pipewire.socket
+superwhisper.service
 wireplumber.service
 xdg-user-dirs.service

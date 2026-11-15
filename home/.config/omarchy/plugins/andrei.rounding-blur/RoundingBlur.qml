@@ -21,7 +21,6 @@ Item {
   readonly property string pluginId: "andrei.rounding-blur"
   // Marker id of the looknfeel.lua block; kept as Omablur's so existing
   // settings are replaced rather than duplicated.
-  readonly property string blockId: "charlieras262.omablur"
   readonly property string pluginDir: {
     var u = String(Qt.resolvedUrl("."))
     if (u.indexOf("file://") === 0) u = u.slice(7)
@@ -46,9 +45,8 @@ Item {
   property int rounding: 8
   property bool blurEnabled: true
   property int blurPercent: 50
-  // Window opacity in percent. Blur only shows through transparent pixels,
-  // and Omarchy's own window rule leaves windows 98.5% opaque.
-  property int opacityPercent: 100
+  // Terminal background opacity in percent, shared with the bar's blur mode.
+  property int opacityPercent: 85
 
   function clampInt(value, min, max, fallback) {
     var n = Math.round(Number(value))
@@ -152,76 +150,38 @@ Item {
   }
 
   // ---------------------------------------------------------------- probes
-  property bool roundingLoaded: false
-  property bool blurEnabledLoaded: false
-  property bool blurSizeLoaded: false
-  property bool opacityLoaded: false
-  readonly property bool loaded: roundingLoaded && blurEnabledLoaded && blurSizeLoaded && opacityLoaded
+  // Settings live in andrei-look (~/.local/state/omarchy/andrei-look.json),
+  // which also feeds the terminals' opacity and the bar's blur mode, so the
+  // popup, the windows, the terminals and the bar always agree.
+  property bool loaded: false
   onLoadedChanged: if (loaded) root.activePreset = root.detectPreset()
 
   function refresh() {
-    roundingLoaded = false
-    blurEnabledLoaded = false
-    blurSizeLoaded = false
-    opacityLoaded = false
-    roundingProbe.running = true
-    opacityProbe.running = true
-    blurEnabledProbe.running = true
-    blurSizeProbe.running = true
+    loaded = false
+    lookProbe.running = true
   }
 
   Process {
-    id: roundingProbe
-    command: ["hyprctl", "-j", "getoption", "decoration:rounding"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        try { root.rounding = root.clampInt(JSON.parse(text).int, 0, 20, root.rounding) } catch (e) {}
-        root.roundingLoaded = true
-      }
-    }
-  }
-
-  Process {
-    id: blurEnabledProbe
-    command: ["hyprctl", "-j", "getoption", "decoration:blur:enabled"]
+    id: lookProbe
+    command: ["andrei-look", "get"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
         try {
-          var parsed = JSON.parse(text)
-          root.blurEnabled = parsed.bool !== undefined ? !!parsed.bool : !!parsed.int
+          var d = JSON.parse(text)
+          root.rounding = root.clampInt(d.rounding, 0, 20, root.rounding)
+          root.blurEnabled = d.blur > 0
+          if (d.blur > 0) root.blurPercent = root.clampInt(d.blur, 0, 100, root.blurPercent)
+          root.opacityPercent = root.clampInt(d.opacity, 50, 100, root.opacityPercent)
         } catch (e) {}
-        root.blurEnabledLoaded = true
-      }
-    }
-  }
-
-  Process {
-    id: blurSizeProbe
-    command: ["hyprctl", "-j", "getoption", "decoration:blur:size"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        try { root.blurPercent = root.percentForBlurSize(root.clampInt(JSON.parse(text).int, 1, 20, 8)) } catch (e) {}
-        root.blurSizeLoaded = true
-      }
-    }
-  }
-
-  Process {
-    id: opacityProbe
-    command: ["hyprctl", "-j", "getoption", "decoration:active_opacity"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        try { root.opacityPercent = root.clampInt(JSON.parse(text).float * 100, 50, 100, root.opacityPercent) } catch (e) {}
-        root.opacityLoaded = true
+        root.loaded = true
       }
     }
   }
 
   // ------------------------------------------------------------ live apply
+  // While a slider moves: Hyprland + bar only (cheap). On release: also the
+  // terminal configs (persistNow).
   property bool applyQueued: false
   property int queuedRounding: rounding
   property bool queuedBlurEnabled: blurEnabled
@@ -237,10 +197,15 @@ Item {
     runApply()
   }
 
+  function lookCommand(r, enabled, percent, opacity, live) {
+    var cmd = ["andrei-look", "set", String(r), String(enabled ? Math.max(1, percent) : 0), String(opacity)]
+    if (live) cmd.push("--live")
+    return cmd
+  }
+
   function runApply() {
     applyQueued = false
-    applyProc.command = ["hyprctl", "eval", root.decorationConfig(queuedRounding, queuedBlurEnabled,
-      blurSizeFor(queuedBlurPercent), blurPassesFor(queuedBlurPercent), queuedOpacityPercent)]
+    applyProc.command = lookCommand(queuedRounding, queuedBlurEnabled, queuedBlurPercent, queuedOpacityPercent, true)
     applyProc.running = true
   }
 
@@ -253,28 +218,8 @@ Item {
   }
 
   // --------------------------------------------------------------- persist
-  function decorationConfig(rounding, blurEnabled, size, passes, opacity) {
-    var alpha = (opacity / 100).toFixed(2)
-    return "hl.config({\n"
-      + "  decoration = {\n"
-      + "    rounding = " + rounding + ",\n"
-      + "    active_opacity = " + alpha + ",\n"
-      + "    inactive_opacity = " + alpha + ",\n"
-      + "    blur = {\n"
-      + "      enabled = " + (blurEnabled ? "true" : "false") + ",\n"
-      + "      size = " + size + ",\n"
-      + "      passes = " + passes + ",\n"
-      + "      new_optimizations = true,\n"
-      + "      ignore_opacity = true,\n"
-      + "    },\n"
-      + "  },\n"
-      + "})"
-  }
-
   function persistNow() {
-    var block = root.decorationConfig(root.rounding, root.blurEnabled,
-      blurSizeFor(root.blurPercent), blurPassesFor(root.blurPercent), root.opacityPercent) + "\n"
-    persistProc.command = ["python3", root.pluginDir + "/install-looknfeel.py", root.blockId, block]
+    persistProc.command = lookCommand(root.rounding, root.blurEnabled, root.blurPercent, root.opacityPercent, false)
     persistProc.running = true
   }
 
@@ -289,7 +234,7 @@ Item {
 
   function setOpacityPercent(v) {
     root.opacityPercent = root.clampInt(v, 50, 100, root.opacityPercent)
-    applyLive(root.rounding, root.blurEnabled, root.blurPercent)
+    applyLive(root.rounding, root.blurEnabled, root.blurPercent, root.opacityPercent)
     persistNow()
   }
 
@@ -526,7 +471,7 @@ Item {
                 width: parent.width
                 Text {
                   id: opacityHeader
-                  text: "WINDOW OPACITY"
+                  text: "TERMINAL & BAR OPACITY"
                   color: root.foreground
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
